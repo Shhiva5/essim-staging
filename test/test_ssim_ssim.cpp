@@ -69,7 +69,7 @@ AllocateAndFill(ptr_t &ptr, const uint32_t width, const uint32_t height,
 
 // Compute eSSIM for 8bit data using multiple-threads.
 eSSIMResult ssim_compute_threaded(
-    uint32_t *const pSsimScore, uint32_t *const pEssimScore, const void *ref,
+    float *const pSsimScore, float *const pEssimScore, const void *ref,
     const ptrdiff_t refStride, const void *cmp, const ptrdiff_t cmpStride,
     const uint32_t width, const uint32_t height, const uint32_t bitDepthMinus8,
     const uint32_t windowSize, const uint32_t windowStride, const uint32_t d2h,
@@ -142,8 +142,8 @@ TEST(ssimTest, threading) {
       for (uint32_t windowStride = 4; windowStride <= windowSize;
            windowStride *= 2) {
         // call the reference function
-        uint32_t essimRef = 0;
-        uint32_t ssimRef = 0;
+        float essimRef = 0;
+        float ssimRef = 0;
         auto resRef = ssim_compute_8u(&ssimRef, &essimRef, pRef, refStride, pCmp,
                                       cmpStride, width, height, windowSize,
                                       windowStride, 1, SSIM_MODE_PERF_INT,
@@ -152,8 +152,8 @@ TEST(ssimTest, threading) {
         // call and test threaded versions
         for (uint32_t numThreads = 1; numThreads < MAX_NUM_THREADS;
              ++numThreads) {
-          uint32_t ssimTst = 0;
-          uint32_t essimTst = 0;
+          float ssimTst = 0;
+          float essimTst = 0;
           auto resTst = ssim_compute_threaded(
               &ssimTst, &essimTst, pRef, refStride, pCmp, cmpStride, width, height,
               bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,
@@ -195,8 +195,8 @@ TEST(ssimTest, threading_10bit) {
       for (uint32_t windowStride = 4; windowStride <= windowSize;
            windowStride *= 2) {
         // call the reference function
-        uint32_t ssimRef = 0;
-        uint32_t essimRef = 0 ;
+        float ssimRef = 0;
+        float essimRef = 0 ;
         auto resRef = ssim_compute_16u(
             &ssimRef, &essimRef, pRef, refStride, pCmp, cmpStride, width, height,
             bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,
@@ -205,8 +205,8 @@ TEST(ssimTest, threading_10bit) {
         // call and test threaded versions
         for (uint32_t numThreads = 1; numThreads < MAX_NUM_THREADS;
              ++numThreads) {
-          uint32_t ssimTst = 0;
-          uint32_t essimTst = 0;
+          float ssimTst = 0;
+          float essimTst = 0;
           auto resTst = ssim_compute_threaded(
               &ssimTst, &essimTst, pRef, refStride, pCmp, cmpStride, width, height,
               bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,

@@ -68,8 +68,8 @@ enum {
 */
 
 eSSIMResult ssim_compute_8u(
-    uint32_t* const pSsimScore,
-    uint32_t* const pEssimScore,
+    float* const pSsimScore,
+    float* const pEssimScore,
     const uint8_t* ref,
     const ptrdiff_t refStride,
     const uint8_t* cmp,
@@ -83,8 +83,8 @@ eSSIMResult ssim_compute_8u(
     const eSSIMFlags flags);
 
 eSSIMResult ssim_compute_16u(
-    uint32_t* const pSsimScore,
-    uint32_t* const pEssimScore,
+    float* const pSsimScore,
+    float* const pEssimScore,
     const uint16_t* ref,
     const ptrdiff_t refStride,
     const uint16_t* cmp,
@@ -141,8 +141,8 @@ eSSIMResult ssim_compute_ctx(
 /* aggregate partial SSIM scores from contexts and provide the final SSIM score
  */
 eSSIMResult ssim_aggregate_score(
-    uint32_t* const pSsimScore,
-    uint32_t* const pEssimScore,
+    float* const pSsimScore,
+    float* const pEssimScore,
     const SSIM_CTX_ARRAY* ctxa);
 
 /* free SSIM contexts */

@@ -78,7 +78,7 @@ static const AVOption essim_options[] = {
 
     { "pooling", "pooling mode for combining the scores across the frame ", OFFSET(pooling), AV_OPT_TYPE_INT,   { .i64 = SSIM_SPATIAL_POOLING_BOTH }, 0, 2, FLAGS, "pool"},
     { "mean", "arithmetic mean pooling",                                    0,               AV_OPT_TYPE_CONST, { .i64 = SSIM_SPATIAL_POOLING_AVERAGE }, INT_MIN, INT_MAX, FLAGS, "pool" },
-    { "cov", "coefficient-of-variation pooling",                            0,               AV_OPT_TYPE_CONST, { .i64 = SSIM_SPATIAL_POOLING_COEFF_OF_VARIANCE }, INT_MIN, INT_MAX, FLAGS, "pool" },
+    { "mink", "minkowksi pooling",                                          0,               AV_OPT_TYPE_CONST, { .i64 = SSIM_SPATIAL_POOLING_MINK }, INT_MIN, INT_MAX, FLAGS, "pool" },
     { "both", "both mean and cov pooling",                                  0,               AV_OPT_TYPE_CONST, { .i64 = SSIM_SPATIAL_POOLING_BOTH }, INT_MIN, INT_MAX, FLAGS, "pool" },
 
     { "window", "size of window", OFFSET(window_size), AV_OPT_TYPE_INT, { .i64 = 8 }, 2, 32, FLAGS },
