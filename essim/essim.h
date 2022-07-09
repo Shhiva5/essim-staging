@@ -52,7 +52,7 @@ typedef enum eSSIMFlags {
   SSIM_SPATIAL_POOLING_AVERAGE = 0,
 
   /* like in hitchhiker's guide return coefficient of variance */
-  SSIM_SPATIAL_POOLING_COEFF_OF_VARIANCE = 1,
+  SSIM_SPATIAL_POOLING_MINK = 1,
 
   SSIM_SPATIAL_POOLING_BOTH = 2
 

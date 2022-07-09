@@ -78,7 +78,7 @@ eSSIMResult ssim_compute_threaded(
       ssim_allocate_ctx_array(
           numThreads, width, height, bitDepthMinus8,
           bitDepthMinus8 > 0 ? SSIM_DATA_16BIT : SSIM_DATA_8BIT, windowSize,
-          windowStride, 1, mode, SSIM_SPATIAL_POOLING_COEFF_OF_VARIANCE));
+          windowStride, 1, mode, SSIM_SPATIAL_POOLING_MINK));
   if (!ctx_array) {
     return SSIM_ERR_ALLOC;
   }
@@ -147,7 +147,7 @@ TEST(ssimTest, threading) {
         auto resRef = ssim_compute_8u(&ssimRef, &essimRef, pRef, refStride, pCmp,
                                       cmpStride, width, height, windowSize,
                                       windowStride, 1, SSIM_MODE_PERF_INT,
-                                      SSIM_SPATIAL_POOLING_COEFF_OF_VARIANCE);
+                                      SSIM_SPATIAL_POOLING_MINK);
 
         // call and test threaded versions
         for (uint32_t numThreads = 1; numThreads < MAX_NUM_THREADS;
@@ -157,7 +157,7 @@ TEST(ssimTest, threading) {
           auto resTst = ssim_compute_threaded(
               &ssimTst, &essimTst, pRef, refStride, pCmp, cmpStride, width, height,
               bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,
-              SSIM_SPATIAL_POOLING_COEFF_OF_VARIANCE, numThreads);
+              SSIM_SPATIAL_POOLING_MINK, numThreads);
           std::this_thread::sleep_for(std::chrono::milliseconds(10));
           ASSERT_EQ(resRef, resTst);
           ASSERT_EQ(ssimRef, ssimTst)
@@ -200,7 +200,7 @@ TEST(ssimTest, threading_10bit) {
         auto resRef = ssim_compute_16u(
             &ssimRef, &essimRef, pRef, refStride, pCmp, cmpStride, width, height,
             bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,
-            SSIM_SPATIAL_POOLING_COEFF_OF_VARIANCE);
+            SSIM_SPATIAL_POOLING_MINK);
 
         // call and test threaded versions
         for (uint32_t numThreads = 1; numThreads < MAX_NUM_THREADS;
@@ -210,7 +210,7 @@ TEST(ssimTest, threading_10bit) {
           auto resTst = ssim_compute_threaded(
               &ssimTst, &essimTst, pRef, refStride, pCmp, cmpStride, width, height,
               bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,
-              SSIM_SPATIAL_POOLING_COEFF_OF_VARIANCE, numThreads);
+              SSIM_SPATIAL_POOLING_MINK, numThreads);
           std::this_thread::sleep_for(std::chrono::milliseconds(10));
           ASSERT_EQ(resRef, resTst);
           ASSERT_EQ(ssimRef, ssimTst)

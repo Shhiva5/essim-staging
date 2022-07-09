@@ -108,7 +108,7 @@ void sum_windows_8x4_int_8u_sse41(SUM_WINDOWS_FORMAL_ARGS) {
   const __m128i halfC2 = _mm_set1_epi32(C2 / 2);
   const __m128i quarterC2 = _mm_set1_epi32(C2 / 4);
 
-  int64_t ssim_sqd_sum = 0, ssim_sum = 0;
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
 
@@ -136,12 +136,13 @@ void sum_windows_8x4_int_8u_sse41(SUM_WINDOWS_FORMAL_ARGS) {
       const int64_t ssim_val = (num[w] + denom[w] / 2) / (denom[w] | 1);
 
       ssim_sum += ssim_val;
-      ssim_sqd_sum += (int64_t)ssim_val * ssim_val;
+      ssim_mink_sum +=
+          (int64_t)ssim_val * ssim_val; // TODO replace with (1 - ssim) ** 4
     }
   }
 
   res->ssim_sum += ssim_sum;
-  res->ssim_sqd_sum += ssim_sqd_sum;
+  res->ssim_mink_sum_f += ssim_mink_sum;
   res->numWindows += i;
 
   if (i < numWindows) {
@@ -224,7 +225,7 @@ void sum_windows_12x4_int_8u_sse41(SUM_WINDOWS_FORMAL_ARGS) {
   const __m128i halfC2 = _mm_set1_epi32(C2 / 2);
   const __m128i quarterC2 = _mm_set1_epi32(C2 / 4);
 
-  int64_t ssim_sqd_sum = 0, ssim_sum = 0;
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
 
@@ -253,12 +254,13 @@ void sum_windows_12x4_int_8u_sse41(SUM_WINDOWS_FORMAL_ARGS) {
       const int64_t ssim_val = (num[w] + denom[w] / 2) / (denom[w] | 1);
 
       ssim_sum += ssim_val;
-      ssim_sqd_sum += (int64_t)ssim_val * ssim_val;
+      ssim_mink_sum +=
+          (int64_t)ssim_val * ssim_val; // TODO replace with (1 - ssim) ** 4
     }
   }
 
   res->ssim_sum += ssim_sum;
-  res->ssim_sqd_sum += ssim_sqd_sum;
+  res->ssim_mink_sum += ssim_mink_sum;
   res->numWindows += i;
 
   if (i < numWindows) {

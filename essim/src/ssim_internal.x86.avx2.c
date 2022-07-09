@@ -251,7 +251,7 @@ static const int8_t sum_12x12_shuffle[16] = {0, 1, 4, 5, 8,  9,  -1, -1,
     ssim_val = _mm256_div_ps(ssim_val, _mm256_mul_ps(c, d));                   \
     ssim_sum = _mm256_add_ps(ssim_sum, ssim_val);                              \
     ssim_val = _mm256_mul_ps(ssim_val, ssim_val);                              \
-    ssim_sqd_sum = _mm256_add_ps(ssim_sqd_sum, ssim_val);                      \
+    ssim_mink_sum = _mm256_add_ps(ssim_mink_sum, ssim_val);                    \
   }
 
 void sum_windows_8x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
@@ -269,7 +269,7 @@ void sum_windows_8x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
   const __m256 C2 = _mm256_set1_ps(fC2);
   const __m256 halfC2 = _mm256_set1_ps(fC2 / 2.0f);
 
-  __m256 ssim_sqd_sum = _mm256_setzero_ps();
+  __m256 ssim_mink_sum = _mm256_setzero_ps();
   __m256 ssim_sum = _mm256_setzero_ps();
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
@@ -292,14 +292,14 @@ void sum_windows_8x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     ASM_CALC_8_FLOAT_SSIM_AVX2();
   }
 
-  ssim_sum = _mm256_hadd_ps(ssim_sum, ssim_sqd_sum);
+  ssim_sum = _mm256_hadd_ps(ssim_sum, ssim_mink_sum);
   ssim_sum = _mm256_hadd_ps(ssim_sum, ssim_sum);
   ssim_sum =
       _mm256_add_ps(ssim_sum, _mm256_permute2f128_ps(ssim_sum, ssim_sum, 1));
 
   res->ssim_sum_f += _mm256_cvtss_f32(ssim_sum);
   ssim_sum = _mm256_shuffle_ps(ssim_sum, ssim_sum, 0x39);
-  res->ssim_sqd_sum_f += _mm256_cvtss_f32(ssim_sum);
+  res->ssim_mink_sum_f += _mm256_cvtss_f32(ssim_sum);
   res->numWindows += i;
 
   _mm256_zeroupper();
@@ -391,7 +391,7 @@ void sum_windows_12x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
   const __m256 C2 = _mm256_set1_ps(fC2);
   const __m256 halfC2 = _mm256_set1_ps(fC2 / 2.0f);
 
-  __m256 ssim_sqd_sum = _mm256_setzero_ps();
+  __m256 ssim_mink_sum = _mm256_setzero_ps();
   __m256 ssim_sum = _mm256_setzero_ps();
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
@@ -415,14 +415,15 @@ void sum_windows_12x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     ASM_CALC_8_FLOAT_SSIM_AVX2();
   }
 
-  ssim_sum = _mm256_hadd_ps(ssim_sum, ssim_sqd_sum);
+  ssim_sum = _mm256_hadd_ps(ssim_sum, ssim_mink_sum);
   ssim_sum = _mm256_hadd_ps(ssim_sum, ssim_sum);
   ssim_sum =
       _mm256_add_ps(ssim_sum, _mm256_permute2f128_ps(ssim_sum, ssim_sum, 1));
 
   res->ssim_sum_f += _mm256_cvtss_f32(ssim_sum);
   ssim_sum = _mm256_shuffle_ps(ssim_sum, ssim_sum, 0x39);
-  res->ssim_sqd_sum_f += _mm256_cvtss_f32(ssim_sum);
+  res->ssim_mink_sum_f +=
+      _mm256_cvtss_f32(ssim_sum); // TODO replace with (1 - ssim) ** 4
   res->numWindows += i;
 
   _mm256_zeroupper();

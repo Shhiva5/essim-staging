@@ -7,6 +7,7 @@
  */
 
 #include <essim/inc/internal.h>
+#include <math.h>
 
 uint32_t GetNum4x4Windows(const uint32_t value, const uint32_t windowSize,
                           const uint32_t windowStride) {
@@ -296,7 +297,7 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
   const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
 
-  int64_t ssim_sqd_sum = 0, ssim_sum = 0;
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
 
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
@@ -324,11 +325,12 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
 
     const int64_t ssim_val = calc_window_ssim_int_8u(&wnd, windowSize, C1, C2);
     ssim_sum += ssim_val;
-    ssim_sqd_sum += (int64_t)ssim_val * ssim_val;
+    ssim_mink_sum +=
+        (int64_t)ssim_val * ssim_val; // TODO replace with (1 - ssim) ** 4
   }
 
   res->ssim_sum += ssim_sum;
-  res->ssim_sqd_sum += ssim_sqd_sum;
+  res->ssim_mink_sum += ssim_mink_sum;
   res->numWindows += numWindows;
 
 } /* void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) */
@@ -347,7 +349,7 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
   const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
   const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
 
-  int64_t ssim_sqd_sum = 0, ssim_sum = 0;
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
 
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
@@ -376,11 +378,11 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
 
     const int64_t ssim_val = calc_window_ssim_int_16u(&wnd, windowSize, C1, C2);
     ssim_sum += ssim_val;
-    ssim_sqd_sum += ssim_val * ssim_val;
+    ssim_mink_sum += ssim_val * ssim_val; // TODO replace with (1 - ssim) ** 4
   }
 
   res->ssim_sum += ssim_sum;
-  res->ssim_sqd_sum += ssim_sqd_sum;
+  res->ssim_mink_sum += ssim_mink_sum;
   res->numWindows += numWindows;
 
 } /* void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) */
@@ -391,7 +393,7 @@ void sum_windows_float_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   const float C1 = get_ssim_float_constant(1, bitDepthMinus8);
   const float C2 = get_ssim_float_constant(2, bitDepthMinus8);
 
-  float ssim_sqd_sum = 0, ssim_sum = 0;
+  double ssim_mink_sum = 0, ssim_sum = 0;
 
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
@@ -419,11 +421,11 @@ void sum_windows_float_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
 
     const float ssim_val = calc_window_ssim_float(&wnd, windowSize, C1, C2);
     ssim_sum += ssim_val;
-    ssim_sqd_sum += ssim_val * ssim_val;
+    ssim_mink_sum += pow(1 - ssim_val, SSIM_POOLING_MINKOWSKI_P);
   }
 
   res->ssim_sum_f += ssim_sum;
-  res->ssim_sqd_sum_f += ssim_sqd_sum;
+  res->ssim_mink_sum_f += ssim_mink_sum;
   res->numWindows += numWindows;
 
 } /* void sum_windows_float_8u_c(SUM_WINDOWS_FORMAL_ARGS) */
@@ -442,7 +444,8 @@ void sum_windows_float_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
   const float C1 = get_ssim_float_constant(1, bitDepthMinus8);
   const float C2 = get_ssim_float_constant(2, bitDepthMinus8);
 
-  float ssim_sqd_sum = 0, ssim_sum = 0;
+  double ssim_mink_sum = 0;
+  float ssim_sum = 0;
 
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
@@ -471,11 +474,11 @@ void sum_windows_float_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
 
     const float ssim_val = calc_window_ssim_float(&wnd, windowSize, C1, C2);
     ssim_sum += ssim_val;
-    ssim_sqd_sum += ssim_val * ssim_val;
+    ssim_mink_sum += pow((1 - ssim_val), SSIM_POOLING_MINKOWSKI_P);
   }
 
   res->ssim_sum_f += ssim_sum;
-  res->ssim_sqd_sum_f += ssim_sqd_sum;
+  res->ssim_mink_sum_f += ssim_mink_sum;
   res->numWindows += numWindows;
 
 } /* void sum_windows_float_16u_c(SUM_WINDOWS_FORMAL_ARGS) */

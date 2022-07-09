@@ -93,7 +93,7 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
   const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
   const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
 
-  int64_t ssim_sqd_sum = 0, ssim_sum = 0;
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
   SSIM_SRC src;
 
   src.refStride = refStride;
@@ -114,12 +114,13 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
       const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2);
 
       ssim_sum += ssim_val;
-      ssim_sqd_sum += (int64_t)ssim_val * ssim_val;
+      ssim_mink_sum +=
+          (int64_t)ssim_val * ssim_val; // TODO replace with (1 - ssim) ** 4
     }
   }
 
   ctx->res.ssim_sum = ssim_sum;
-  ctx->res.ssim_sqd_sum = ssim_sqd_sum;
+  ctx->res.ssim_mink_sum = ssim_mink_sum;
   ctx->res.numWindows =
       GetTotalWindows(width, height, windowSize, windowStride);
 

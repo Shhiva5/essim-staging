@@ -402,7 +402,7 @@ static const int8_t sum_12x12_shuffle[16] = {0, 1, 4, 5, 8,  9,  -1, -1,
       ssim_val = _mm_div_ps(ssim_val, _mm_mul_ps(c, d));                       \
       ssim_sum = _mm_add_ps(ssim_sum, ssim_val);                               \
       ssim_val = _mm_mul_ps(ssim_val, ssim_val);                               \
-      ssim_sqd_sum = _mm_add_ps(ssim_sqd_sum, ssim_val);                       \
+      ssim_mink_sum = _mm_add_ps(ssim_mink_sum, ssim_val);                     \
     }                                                                          \
   }
 
@@ -421,7 +421,7 @@ void sum_windows_8x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) {
   const __m128 C2 = _mm_set1_ps(fC2);
   const __m128 halfC2 = _mm_set1_ps(fC2 / 2.0f);
 
-  __m128 ssim_sqd_sum = _mm_setzero_ps();
+  __m128 ssim_mink_sum = _mm_setzero_ps();
   __m128 ssim_sum = _mm_setzero_ps();
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
@@ -444,12 +444,12 @@ void sum_windows_8x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) {
     ASM_CALC_4_FLOAT_SSIM_SSE();
   }
 
-  ssim_sum = _mm_hadd_ps(ssim_sum, ssim_sqd_sum);
+  ssim_sum = _mm_hadd_ps(ssim_sum, ssim_mink_sum);
   ssim_sum = _mm_hadd_ps(ssim_sum, ssim_sum);
 
   res->ssim_sum_f += _mm_cvtss_f32(ssim_sum);
   ssim_sum = _mm_shuffle_ps(ssim_sum, ssim_sum, 0x39);
-  res->ssim_sqd_sum_f += _mm_cvtss_f32(ssim_sum);
+  res->ssim_mink_sum_f += _mm_cvtss_f32(ssim_sum);
   res->numWindows += i;
 
   if (i < numWindows) {
@@ -533,7 +533,7 @@ void sum_windows_12x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) {
   const __m128 C2 = _mm_set1_ps(fC2);
   const __m128 halfC2 = _mm_set1_ps(fC2 / 2.0f);
 
-  __m128 ssim_sqd_sum = _mm_setzero_ps();
+  __m128 ssim_mink_sum = _mm_setzero_ps();
   __m128 ssim_sum = _mm_setzero_ps();
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
@@ -557,12 +557,13 @@ void sum_windows_12x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) {
     ASM_CALC_4_FLOAT_SSIM_SSE();
   }
 
-  ssim_sum = _mm_hadd_ps(ssim_sum, ssim_sqd_sum);
+  ssim_sum = _mm_hadd_ps(ssim_sum, ssim_mink_sum);
   ssim_sum = _mm_hadd_ps(ssim_sum, ssim_sum);
 
   res->ssim_sum_f += _mm_cvtss_f32(ssim_sum);
   ssim_sum = _mm_shuffle_ps(ssim_sum, ssim_sum, 0x39);
-  res->ssim_sqd_sum_f += _mm_cvtss_f32(ssim_sum);
+  res->ssim_mink_sum_f +=
+      _mm_cvtss_f32(ssim_sum); // TODO replace with (1 - ssim) ** 4
   res->numWindows += i;
 
   if (i < numWindows) {

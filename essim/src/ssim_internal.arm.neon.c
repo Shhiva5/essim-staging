@@ -394,7 +394,7 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
   const uint32x4_t halfC2 = vdupq_n_u32(C2 / 2);
   const int32x4_t quarterC2 = vdupq_n_s32(C2 / 4);
 
-  int64_t ssim_sqd_sum = 0, ssim_sum = 0;
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
 
@@ -420,14 +420,13 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
 
     for (size_t w = 0; w < WIN_CHUNK; ++w) {
       const int64_t ssim_val = (num[w] + denom[w] / 2) / (denom[w] | 1);
-
       ssim_sum += ssim_val;
-      ssim_sqd_sum += (int64_t)ssim_val * ssim_val;
+      ssim_mink_sum += ssim_val * ssim_val * ssim_val * ssim_val;
     }
   }
 
   res->ssim_sum += ssim_sum;
-  res->ssim_sqd_sum += ssim_sqd_sum;
+  res->ssim_mink_sum += ssim_mink_sum;
   res->numWindows += i;
 
   if (i < numWindows) {
@@ -497,7 +496,7 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
       ssim_val = vdivq_f32(ssim_val, vmulq_f32(c, d));                         \
       ssim_sum = vaddq_f32(ssim_sum, ssim_val);                                \
       ssim_val = vmulq_f32(ssim_val, ssim_val);                                \
-      ssim_sqd_sum = vaddq_f32(ssim_sqd_sum, ssim_val);                        \
+      ssim_mink_sum = vaddq_f32(ssim_mink_sum, ssim_val);                      \
     }                                                                          \
   }
 
@@ -513,7 +512,7 @@ void sum_windows_8x4_float_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
   const float32x4_t C2 = vdupq_n_f32(fC2);
   const float32x4_t halfC2 = vdupq_n_f32(fC2 / 2.0f);
 
-  float32x4_t ssim_sqd_sum = vdupq_n_f32(0.0f);
+  float32x4_t ssim_mink_sum = vdupq_n_f32(0.0f);
   float32x4_t ssim_sum = vdupq_n_f32(0.0f);
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
@@ -536,11 +535,11 @@ void sum_windows_8x4_float_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     ASM_CALC_4_FLOAT_SSIM_NEON();
   }
 
-  ssim_sum = vpaddq_f32(ssim_sum, ssim_sqd_sum);
+  ssim_sum = vpaddq_f32(ssim_sum, ssim_mink_sum);
   ssim_sum = vpaddq_f32(ssim_sum, ssim_sum);
 
   res->ssim_sum_f += vgetq_lane_f32(ssim_sum, 0);
-  res->ssim_sqd_sum_f += vgetq_lane_f32(ssim_sum, 1);
+  res->ssim_mink_sum_f += vgetq_lane_f32(ssim_sum, 1);
   res->numWindows += i;
 
   if (i < numWindows) {

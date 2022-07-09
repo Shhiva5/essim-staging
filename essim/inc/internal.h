@@ -22,6 +22,8 @@ extern "C" {
 
 enum { LOG2_ALIGN = 6, ALIGN = 1 << LOG2_ALIGN };
 
+#define SSIM_POOLING_MINKOWSKI_P 4
+
 #pragma pack(push, 1)
 
 typedef struct WINDOW_STATS {
@@ -58,11 +60,11 @@ typedef struct SSIM_4X4_WINDOW_ROW {
 typedef struct SSIM_RES {
   /* integer function results */
   uint64_t ssim_sum;
-  uint64_t ssim_sqd_sum;
+  uint64_t ssim_mink_sum;
 
   /* float function results */
   float ssim_sum_f;
-  float ssim_sqd_sum_f;
+  double ssim_mink_sum_f;
 
   /* number of windows summed */
   size_t numWindows;
