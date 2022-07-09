@@ -58,6 +58,15 @@ Assuming you didn't skip building tests you can run tests using `ctest`
 ctest --output-on-failure
 ```
 
+## Build x86 on ARM based MacOS
+
+To build x86 code instead of ARM on MacOS machines with M1 or later
+ARM CPUs you can use the `CMAKE_OSX_ARCHITECTURES` flag
+
+``` shell
+cmake .. -DCMAKE_OSX_ARCHITECTURES=x86_64
+```
+
 ## FFmpeg Integration
 
 You can use ESSIM as an ffmpeg filter, using the included `vf_essim.c`
