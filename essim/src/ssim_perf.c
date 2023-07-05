@@ -56,8 +56,15 @@ eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
     }
 
     /* sum up windows */
+    clock_t start=0, end=0;
+    double cpu_time_used=0;
+    start = clock();
     sum_windows_proc(&ctx->res, &ctx->windowRows[0].ptrs, numWindows,
                      windowSize, windowStride, ctx->params->bitDepthMinus8);
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    //printf("\t numWindows: %i \n",numWindows);
+    //printf("\t cpu_time_used/numWindows: %lf microsecs\n",(cpu_time_used/(double)numWindows)*1000000);
   }
 
   return SSIM_OK;

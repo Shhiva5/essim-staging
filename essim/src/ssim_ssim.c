@@ -385,7 +385,8 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
     return SSIM_ERR_NULL_PTR;
   }
 
-  if (SSIM_MODE_PERF_FLOAT == ctxa->params.mode) {
+  //if (SSIM_MODE_PERF_FLOAT == ctxa->params.mode) {
+  if (1) {
     double ssim_sum = 0.0f;
     double ssim_mink_sum = 0.0f;
     size_t numWindows = 0;
@@ -410,8 +411,13 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
         SSIM_SPATIAL_POOLING_BOTH == ctxa->params.flags) {
 
       if (numWindows) {
-        *pEssimScore = 1.0 - pow(ssim_mink_sum / (float)numWindows,
+        if(ssim_mink_sum > 0.000000001 || ssim_mink_sum < -0.000000001) {
+            *pEssimScore = 1.0 - pow(ssim_mink_sum / (float)numWindows,
                                  1.0 / SSIM_POOLING_MINKOWSKI_P);
+        }
+        else {
+          *pEssimScore = 1.0;
+        }
       } else {
         return SSIM_ERR_FAILED;
       }

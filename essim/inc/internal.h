@@ -15,6 +15,8 @@
 #include <essim/essim.h>
 
 #include <stdint.h>
+#include <time.h>
+#include <stdio.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -22,16 +24,26 @@ extern "C" {
 
 enum { LOG2_ALIGN = 6, ALIGN = 1 << LOG2_ALIGN };
 
+#define ENABLE_MINK_3 1 //Default mink_4 is choosen
+
+#if ENABLE_MINK_3
+#define SSIM_POOLING_MINKOWSKI_P 3
+#else
 #define SSIM_POOLING_MINKOWSKI_P 4
+#endif
+#define NUM_OF_BITS_TO_RIGHTSHIFT 0
 
 #pragma pack(push, 1)
 
 typedef struct WINDOW_STATS {
   uint32_t ref_sum;
   uint32_t cmp_sum;
-  uint64_t ref_sigma_sqd;
-  uint64_t cmp_sigma_sqd;
-  uint64_t sigma_both;
+  //uint64_t ref_sigma_sqd;
+  //uint64_t cmp_sigma_sqd;
+  //uint64_t sigma_both;
+  uint32_t ref_sigma_sqd;
+  uint32_t cmp_sigma_sqd;
+  uint32_t sigma_both;
 
 } WINDOW_STATS;
 
@@ -92,8 +104,8 @@ typedef struct SSIM_SRC {
 
 #define CALC_WINDOW_SSIM_FORMAL_ARGS                                      \
   WINDOW_STATS *const pWnd, const uint32_t windowSize, const uint32_t C1, \
-      const uint32_t C2
-#define CALC_WINDOW_SSIM_ACTUAL_ARGS pWnd, windowSize, C1, C2
+      const uint32_t C2, uint32_t rightShiftBits
+#define CALC_WINDOW_SSIM_ACTUAL_ARGS pWnd, windowSize, C1, C2, rightShiftBits
 
 typedef void (*load_window_proc_t)(LOAD_WINDOW_FORMAL_ARGS);
 typedef int64_t (*calc_window_ssim_proc_t)(CALC_WINDOW_SSIM_FORMAL_ARGS);
@@ -196,7 +208,8 @@ float get_ssim_float_constant(
 void load_window_8u_c(LOAD_WINDOW_FORMAL_ARGS);
 void load_window_16u_c(LOAD_WINDOW_FORMAL_ARGS);
 
-int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS);
+//int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS);
+float calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS);
 int64_t calc_window_ssim_int_16u(CALC_WINDOW_SSIM_FORMAL_ARGS);
 float calc_window_ssim_float(
     WINDOW_STATS* const pWnd,

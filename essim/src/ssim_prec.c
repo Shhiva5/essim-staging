@@ -92,6 +92,7 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
   const uint32_t bitDepthMinus8 = ctx->params->bitDepthMinus8;
   const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
   const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
+  uint32_t rightShiftBits = NUM_OF_BITS_TO_RIGHTSHIFT + bitDepthMinus8;
 
   int64_t ssim_mink_sum = 0, ssim_sum = 0;
   SSIM_SRC src;
@@ -111,7 +112,7 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
       src.ref = AdvancePointer(src.ref, windowStep);
       src.cmp = AdvancePointer(src.cmp, windowStep);
 
-      const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2);
+      const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2, rightShiftBits);
 
       ssim_sum += ssim_val;
       ssim_mink_sum +=
