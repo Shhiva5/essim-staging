@@ -26,7 +26,9 @@
     } else {                                                                   \
       p##name = name##_c;                                                      \
     }                                                                          \
-    p##name = name##_c; \
+    if(ENABLE_ONLY_C_PATH) { \
+      p##name = name##_c; \
+    } \
     p##name ACTUAL_ARGS;                                                       \
   }                                                                            \
   /* implement the caller */                                                   \
@@ -47,7 +49,9 @@
     } else {                                                                   \
       p##name = name##_c;                                                      \
     }                                                                          \
-    p##name = name##_c; \
+    if(ENABLE_ONLY_C_PATH) { \
+      p##name = name##_c; \
+    } \
     p##name ACTUAL_ARGS;                                                       \
   }                                                                            \
   /* implement the caller */                                                   \

@@ -47,7 +47,7 @@ struct Dim {
                                 {68, 16},
                                 {320, 240},
                                 {720, 480}}}; */
-const std::array<Dim, 1> dims{{{720, 480}}};
+const std::array<Dim, 1> dims{{{3840, 2160}}};
 
 struct ctx_array_deallocator {
   void operator()(SSIM_CTX_ARRAY *const array) { ssim_free_ctx_array(array); }
@@ -152,22 +152,22 @@ TEST(ssimTest, threading) {
                                       windowStride, 1, SSIM_MODE_REF,
                                       SSIM_SPATIAL_POOLING_BOTH);
         std::cout << "ssimRef : " << (float)ssimRef <<  " essimRef : " << (float)essimRef << std::endl;
-        float essimRef2 = 0;
-		    float ssimRef2 = 0;
-		    auto resRef2 = ssim_compute_8u(&ssimRef2, &essimRef2, pRef, refStride, pCmp,
+        float essimRefInt = 0;
+		    float ssimRefInt = 0;
+		    auto resRef2 = ssim_compute_8u(&ssimRefInt, &essimRefInt, pRef, refStride, pCmp,
                                       cmpStride, width, height, windowSize,
                                       windowStride, 1, SSIM_MODE_PERF_INT,
                                       SSIM_SPATIAL_POOLING_BOTH);
-		    std::cout << "ssimRef_Int : " << (float)ssimRef2 <<  " essimRef_Int : " << (float)essimRef2 << std::endl;
-		    float essimRef1 = 0;
-		    float ssimRef1 = 0;
-		    auto resRef1 = ssim_compute_8u(&ssimRef1, &essimRef1, pRef, refStride, pCmp,
+		    std::cout << "ssimRef_Int : " << (float)ssimRefInt <<  " essimRef_Int : " << (float)essimRefInt << std::endl;
+		    float essimRefFloat = 0;
+		    float ssimRefFloat = 0;
+		    auto resRef1 = ssim_compute_8u(&ssimRefFloat, &essimRefFloat, pRef, refStride, pCmp,
                                       cmpStride, width, height, windowSize,
                                       windowStride, 1, SSIM_MODE_PERF_FLOAT,
                                       SSIM_SPATIAL_POOLING_BOTH);
-		    std::cout << "ssimRefFloat : " << (float)ssimRef1 <<  " essimRefFloat : " << (float)essimRef1 << std::endl;
+		    std::cout << "ssimRefFloat : " << (float)ssimRefFloat <<  " essimRefFloat : " << (float)essimRefFloat << std::endl;
         // call and test threaded versions
-        /*for (uint32_t numThreads = 1; numThreads < MAX_NUM_THREADS;
+        for (uint32_t numThreads = 1; numThreads < MAX_NUM_THREADS;
              ++numThreads) {
           float ssimTst = 0;
           float essimTst = 0;
@@ -185,14 +185,14 @@ TEST(ssimTest, threading) {
               << "essim failed with " << numThreads << " threads. Window size is "
               << windowSize << ", window stride is " << windowStride
               << ". Frame size is " << width << "x" << height;
-        } */
+        }
       }
     }
   }
 
 } // TEST(ssimTest, threading)
 
-/*TEST(ssimTest, threading_10bit) {
+TEST(ssimTest, threading_10bit) {
   for (auto &dim : dims) {
     std::unique_ptr<void, ssim::aligned_memory_deleter_t> pRefAllocated,
         pCmpAllocated;
@@ -243,4 +243,4 @@ TEST(ssimTest, threading) {
     }
   }
 
-} // TEST(ssimTest, threading_10bit) */
+} // TEST(ssimTest, threading_10bit)

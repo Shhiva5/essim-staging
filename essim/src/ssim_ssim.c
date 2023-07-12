@@ -19,6 +19,8 @@
 
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 
+uint32_t div_lookup[65536];
+
 static uint32_t isqrt(const uint64_t v) {
   if (0 == v) {
     return 0;
@@ -44,6 +46,14 @@ static uint32_t isqrt(const uint64_t v) {
 
   return lower;
 }
+
+uint32_t* div_lookup_generator() {
+    div_lookup[0] = div_Q_factor;
+    for (int i = 1; i <= 65535; ++i) {
+        div_lookup[i] = div_Q_factor / i;
+    }
+    return div_lookup;
+}/*void div_lookup_generator()*/
 
 eSSIMResult ssim_compute_8u(float *const pSsimScore, float *const pEssimScore,
                             const uint8_t *ref, const ptrdiff_t refStride,
@@ -238,6 +248,14 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
   if ((8 > windowSize) || (16 < windowSize)) {
     return NULL;
   }
+
+#if UPDATED_INTEGER_IMPLEMENTATION
+  if ((width >= MAX_FRAME_WIDTH) && (height >= MAX_FRAME_HEIGHT)) {
+    if(windowStride==4)
+      printf("WARNING : eSSIM precision will be very low");
+  }
+#endif
+
   if ((SSIM_MODE_REF != mode) && ((windowSize & 3) || (windowStride & 3))) {
     /* optimized versions support dimensions that product of 4 only */
     return NULL;
@@ -298,6 +316,24 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
   memset(p->ctx, 0, sizeof(arraySize));
   p->numCtx = numCtx;
 
+#if UPDATED_INTEGER_IMPLEMENTATION
+  uint32_t SSIMValRtShiftBits = 0;
+  uint32_t SSIMValRtShiftHalfRound = 0;
+  uint32_t* div_lookup_ptr = NULL;
+  if(mode != SSIM_MODE_PERF_FLOAT) {
+    /*generating LUT to avoid final stage division in cal window for ssim_val*/
+    div_lookup_ptr = div_lookup_generator();
+
+    uint32_t numWindows = GetTotalWindows(width, height, windowSize, windowStride);
+    uint32_t ssimFinalPrecisionMaxVal =
+                ceil(pow(MAX_SSIM_ACCUMULATED_SUM_VALUE/(double)numWindows, 1.0/SSIM_POOLING_MINKOWSKI_P)/2);
+    uint32_t ssimFinalPrecisionInBits = GetTotalBitsInNumber(ssimFinalPrecisionMaxVal);
+    int32_t additionlRtShiftBits = DEFAULT_Q_FORMAT_FOR_SSIM_VAL - (int32_t)ssimFinalPrecisionInBits;
+    SSIMValRtShiftBits = DEFAULT_Q_FORMAT_FOR_SSIM_VAL + additionlRtShiftBits;
+    SSIMValRtShiftHalfRound = 1 << (SSIMValRtShiftBits-1);
+  }
+#endif
+
   /* initialize individual contexts */
   for (size_t i = 0; i < numCtx; ++i) {
     p->ctx[i] = ssim_allocate_ctx(width, dataType, windowSize, mode);
@@ -307,6 +343,11 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
     }
 
     p->ctx[i]->params = &p->params;
+#if UPDATED_INTEGER_IMPLEMENTATION
+    p->ctx[i]->div_lookup_ptr = div_lookup_ptr;
+    p->ctx[i]->SSIMValRtShiftBits = SSIMValRtShiftBits ;
+    p->ctx[i]->SSIMValRtShiftHalfRound = SSIMValRtShiftHalfRound;
+#endif
   }
 
   return p;
@@ -363,6 +404,7 @@ eSSIMResult ssim_compute_ctx(SSIM_CTX *const ctx, const void *ref,
   if ((8 > windowSize) || (16 < windowSize)) {
     return SSIM_ERR_BAD_PARAM;
   }
+
   if ((SSIM_MODE_REF != mode) && ((windowSize & 3) || (windowStride & 3))) {
     /* optimized versions support dimensions that product of 4 only */
     return SSIM_ERR_BAD_PARAM;
@@ -385,8 +427,7 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
     return SSIM_ERR_NULL_PTR;
   }
 
-  //if (SSIM_MODE_PERF_FLOAT == ctxa->params.mode) {
-  if (1) {
+  if (SSIM_MODE_PERF_FLOAT == ctxa->params.mode) {
     double ssim_sum = 0.0f;
     double ssim_mink_sum = 0.0f;
     size_t numWindows = 0;
@@ -411,6 +452,7 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
         SSIM_SPATIAL_POOLING_BOTH == ctxa->params.flags) {
 
       if (numWindows) {
+#if UPDATED_INTEGER_IMPLEMENTATION
         if(ssim_mink_sum > 0.000000001 || ssim_mink_sum < -0.000000001) {
             *pEssimScore = 1.0 - pow(ssim_mink_sum / (float)numWindows,
                                  1.0 / SSIM_POOLING_MINKOWSKI_P);
@@ -418,6 +460,10 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
         else {
           *pEssimScore = 1.0;
         }
+#elif !UPDATED_INTEGER_IMPLEMENTATION
+      *pEssimScore = 1.0 - pow(ssim_mink_sum / (float)numWindows,
+                                 1.0 / SSIM_POOLING_MINKOWSKI_P);
+#endif
       } else {
         return SSIM_ERR_FAILED;
       }
@@ -426,6 +472,9 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
     int64_t ssim_sum = 0;
     int64_t ssim_mink_sum = 0;
     size_t numWindows = 0;
+#if UPDATED_INTEGER_IMPLEMENTATION
+    uint32_t SSIMValRtShiftBits = 0;
+#endif
 
     for (size_t i = 0; i < ctxa->numCtx; ++i) {
       SSIM_CTX *const ctx = ssim_access_ctx(ctxa, i);
@@ -433,13 +482,25 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
       ssim_sum += ctx->res.ssim_sum;
       ssim_mink_sum += ctx->res.ssim_mink_sum;
       numWindows += ctx->res.numWindows;
+#if UPDATED_INTEGER_IMPLEMENTATION
+      SSIMValRtShiftBits = ctx->SSIMValRtShiftBits;
+#endif
     }
+#if UPDATED_INTEGER_IMPLEMENTATION
+    int32_t extraRtShiftBitsForSSIMVal = (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+    uint32_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
+#endif
 
     if (SSIM_SPATIAL_POOLING_AVERAGE == ctxa->params.flags ||
         SSIM_SPATIAL_POOLING_BOTH == ctxa->params.flags) {
       if (numWindows) {
+#if UPDATED_INTEGER_IMPLEMENTATION
+        int64_t avg_ssim_sum =  ssim_sum/(int64_t)numWindows;
+        *pSsimScore = (float)avg_ssim_sum / const_1;
+#elif !UPDATED_INTEGER_IMPLEMENTATION
         *pSsimScore = ((ssim_sum + (numWindows / 2)) / numWindows) /
-                      (1u << SSIM_LOG2_SCALE);
+                     (1u << SSIM_LOG2_SCALE);
+#endif
       } else {
         return SSIM_ERR_FAILED;
       }
@@ -448,13 +509,19 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
         SSIM_SPATIAL_POOLING_BOTH == ctxa->params.flags) {
 
       if (numWindows) {
+#if UPDATED_INTEGER_IMPLEMENTATION
+        int64_t avg_ssim_mink_sum =  ssim_mink_sum/(int64_t)numWindows;
+        *pEssimScore = 1.0 - (float)(pow(avg_ssim_mink_sum,
+                                 1.0 / SSIM_POOLING_MINKOWSKI_P))/const_1;
+#elif !UPDATED_INTEGER_IMPLEMENTATION
         // TODO set pEssimScore to equivalent of: 1.0 - (ssim_mink_sum /
         // numWindows) ** 1/4 return float value rather than shifted by
         // SSIM_LOG2_SCALE
-        *pEssimScore =
+         *pEssimScore =
             1.0 - pow(((ssim_mink_sum + (numWindows / 2)) / numWindows) /
                           (1u << SSIM_LOG2_SCALE),
                       1.0 / SSIM_POOLING_MINKOWSKI_P);
+#endif
       } else {
         return SSIM_ERR_FAILED;
       }

@@ -454,9 +454,13 @@ void sum_windows_8x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) {
 
   if (i < numWindows) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
-
+#if UPDATED_INTEGER_IMPLEMENTATION
+    sum_windows_8x4_float_8u_c(res, &buf, numWindows - i, windowSize,
+                               windowStride, bitDepthMinus8,NULL,0,0);
+#elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_float_8u_c(res, &buf, numWindows - i, windowSize,
                                windowStride, bitDepthMinus8);
+#endif
   }
 
 } /* void sum_windows_8x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) */
@@ -568,9 +572,13 @@ void sum_windows_12x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) {
 
   if (i < numWindows) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
-
+#if UPDATED_INTEGER_IMPLEMENTATION
+    sum_windows_12x4_float_8u_c(res, &buf, numWindows - i, windowSize,
+                                windowStride, bitDepthMinus8, NULL, 0, 0);
+#elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_12x4_float_8u_c(res, &buf, numWindows - i, windowSize,
                                 windowStride, bitDepthMinus8);
+#endif
   }
 
 } /* void sum_windows_12x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) */

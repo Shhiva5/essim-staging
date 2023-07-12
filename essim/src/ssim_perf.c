@@ -56,15 +56,26 @@ eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
     }
 
     /* sum up windows */
+#if PROFILING_PRINTS
     clock_t start=0, end=0;
     double cpu_time_used=0;
     start = clock();
+#endif
+#if UPDATED_INTEGER_IMPLEMENTATION
+    sum_windows_proc(&ctx->res, &ctx->windowRows[0].ptrs, numWindows,
+                     windowSize, windowStride, ctx->params->bitDepthMinus8,
+                     ctx->div_lookup_ptr, ctx->SSIMValRtShiftBits,
+                     ctx->SSIMValRtShiftHalfRound);
+#elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_proc(&ctx->res, &ctx->windowRows[0].ptrs, numWindows,
                      windowSize, windowStride, ctx->params->bitDepthMinus8);
+#endif
+#if PROFILING_PRINTS
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    //printf("\t numWindows: %i \n",numWindows);
-    //printf("\t cpu_time_used/numWindows: %lf microsecs\n",(cpu_time_used/(double)numWindows)*1000000);
+    printf("\t numWindows: %i \n",numWindows);
+    printf("\t cpu_time_used/numWindows: %lf microsecs\n",(cpu_time_used/(double)numWindows)*1000000);
+#endif
   }
 
   return SSIM_OK;

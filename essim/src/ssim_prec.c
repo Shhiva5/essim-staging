@@ -111,9 +111,14 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
       load_window_proc(&wnd, &src, windowSize);
       src.ref = AdvancePointer(src.ref, windowStep);
       src.cmp = AdvancePointer(src.cmp, windowStep);
-
-      const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2, rightShiftBits);
-
+#if UPDATED_INTEGER_IMPLEMENTATION
+      /*Last arguments should be SSIMValRtShiftBits & SSIMValRtShiftHalfRound,
+        this is temperory fix to avoid build errors*/
+      const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2,
+        rightShiftBits, ctx->div_lookup_ptr, 0, 0);
+#elif !UPDATED_INTEGER_IMPLEMENTATION
+      const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2);
+#endif
       ssim_sum += ssim_val;
       ssim_mink_sum +=
           (int64_t)ssim_val * ssim_val; // TODO replace with (1 - ssim) ** 4
