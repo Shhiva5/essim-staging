@@ -30,6 +30,8 @@ enum { LOG2_ALIGN = 6, ALIGN = 1 << LOG2_ALIGN };
 #define PROFILING_PRINTS 0
 #define ENABLE_ONLY_C_PATH 1
 #define UPDATED_INTEGER_IMPLEMENTATION 1
+#define ARM64_SIMD_FIX 1
+#define NEW_SIMD_FUNC 1
 
 #define ENABLE_MINK_3 0 //Default mink_4 is choosen
 
@@ -64,6 +66,9 @@ Based on above cases, we consider SSIM_ACCUMULATED_SUM maximum value can be
 
 #define div_Q_factor 1073741824  //2^30
 
+#if NEW_SIMD_FUNC
+#define MSB 4294901760 //2^32-2^16
+#endif
 /*Max WxH = 3840x2160
   Max WindowSize = 16x16
   Min windowStride = 4
@@ -325,6 +330,10 @@ void load_4x4_windows_8u(LOAD_4x4_WINDOWS_FORMAL_ARGS);
 void sum_windows_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_int_8u(SUM_WINDOWS_FORMAL_ARGS);
+#if NEW_SIMD_FUNC
+void sum_windows_8x8_int_8u(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_int_8u(SUM_WINDOWS_FORMAL_ARGS);
+#endif
 void sum_windows_float_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_float_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_float_8u(SUM_WINDOWS_FORMAL_ARGS);
@@ -341,6 +350,10 @@ void load_4x4_windows_8u_c(LOAD_4x4_WINDOWS_FORMAL_ARGS);
 void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
+#if NEW_SIMD_FUNC
+void sum_windows_8x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
+#endif
 void sum_windows_float_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_float_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_float_8u_c(SUM_WINDOWS_FORMAL_ARGS);
@@ -377,6 +390,11 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
 
 void sum_windows_8x4_float_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
+
+#if NEW_SIMD_FUNC
+void sum_windows_8x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
+#endif
 
 #endif /* defined(_X86) || defined(_X64) */
 

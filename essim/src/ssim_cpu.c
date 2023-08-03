@@ -144,11 +144,15 @@ static eCPUType QueryCpuType() {
 
 static eCPUType QueryCpuType() { return cpu_neon; }
 
+#else
+
+static eCPUType QueryCpuType() { return cpu_neon; }
+
 #endif /* defined(__ANDROID__) */
 
 #else /* an unknown platform */
 
-static eCPUType QueryCpuType() { return cpuPlain; }
+static eCPUType QueryCpuType() { return cpu_neon; }
 
 #endif /* defined(_X86) || defined(_X64) */
 

@@ -433,6 +433,15 @@ void sum_windows_12x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
 }
 
+#if NEW_SIMD_FUNC
+void sum_windows_8x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_16_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+#endif
+
 void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
   const uint32_t windowSizeDiv4 = windowSize / 4;
 
