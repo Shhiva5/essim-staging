@@ -39,7 +39,7 @@ target_include_directories(essim PRIVATE
   )
 set_property(SOURCE "essim/src/ssim_internal.x86.sse41.c" "essim/src/ssim_internal.x86.ssse3.c"  PROPERTY COMPILE_FLAGS "-mssse3 -msse4.1")
 set_property(SOURCE "essim/src/ssim_internal.x86.avx2.c" PROPERTY COMPILE_FLAGS "-mavx2")
-set_target_properties(essim PROPERTIES COMPILE_FLAGS "-fexceptions -fpermissive -Wall -Wpedantic -mxsave")
+set_target_properties(essim PROPERTIES COMPILE_FLAGS "-fexceptions -fpermissive -Wall -Wpedantic -mxsave -O3")
 
 if(BUILD_TESTS)
   include(FetchContent)

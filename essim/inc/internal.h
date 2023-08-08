@@ -27,9 +27,8 @@ extern "C" {
 enum { LOG2_ALIGN = 6, ALIGN = 1 << LOG2_ALIGN };
 
 #define DEBUG_PRINTS 0
-#define PROFILING_PRINTS 0
+#define INTR_PROFILING_PRINTS 0
 #define ENABLE_ONLY_C_PATH 1
-#define UPDATED_INTEGER_IMPLEMENTATION 1
 
 #define ENABLE_MINK_3 0 //Default mink_4 is choosen
 
@@ -38,7 +37,7 @@ enum { LOG2_ALIGN = 6, ALIGN = 1 << LOG2_ALIGN };
 #else
 #define SSIM_POOLING_MINKOWSKI_P 4
 #endif
-#define NUM_OF_BITS_TO_RIGHTSHIFT 0
+
 
 /*Max WxH eSSSIM can support*/
 #define MAX_FRAME_WIDTH 7680
@@ -51,10 +50,10 @@ enum { LOG2_ALIGN = 6, ALIGN = 1 << LOG2_ALIGN };
 /*ssim_val can be in the range of -1 to 1. so if ssim_val is -ve & mink pooling is 3,
 then ssim_accumulated_sum can be -ve, so we need one bit for sign representation.
 Based on above cases, we consider SSIM_ACCUMULATED_SUM maximum value can be
-2^64 (for mink 4) or 2^63 (for mink 3).
+(2^64)-1 (for mink 4) or 2^63 (for mink 3).
 */
 #if SSIM_POOLING_MINKOWSKI_P == 4
-#define MAX_SSIM_ACCUMULATED_SUM_VALUE (((uint64_t)1 << 64)-2)
+#define MAX_SSIM_ACCUMULATED_SUM_VALUE (uint64_t)18446744073709551615 /*(2^64) -1*/
 #else /*SSIM_POOLING_MINKOWSKI_P == 3*/
 #define MAX_SSIM_ACCUMULATED_SUM_VALUE (((uint64_t)1 << 63))
 #endif
@@ -77,15 +76,9 @@ Based on above cases, we consider SSIM_ACCUMULATED_SUM maximum value can be
 typedef struct WINDOW_STATS {
   uint32_t ref_sum;
   uint32_t cmp_sum;
-#if UPDATED_INTEGER_IMPLEMENTATION
-  uint32_t ref_sigma_sqd;
-  uint32_t cmp_sigma_sqd;
-  uint32_t sigma_both;
-#elif !UPDATED_INTEGER_IMPLEMENTATION
   uint64_t ref_sigma_sqd;
   uint64_t cmp_sigma_sqd;
   uint64_t sigma_both;
-#endif
 } WINDOW_STATS;
 
 /* the temporal buffer has the following structure:
@@ -294,6 +287,9 @@ void load_window_8u_c(LOAD_WINDOW_FORMAL_ARGS);
 void load_window_16u_c(LOAD_WINDOW_FORMAL_ARGS);
 
 int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS);
+#if UPDATED_INTEGER_IMPLEMENTATION
+int64_t calc_window_ssim_int_10bd(CALC_WINDOW_SSIM_FORMAL_ARGS);
+#endif
 int64_t calc_window_ssim_int_16u(CALC_WINDOW_SSIM_FORMAL_ARGS);
 float calc_window_ssim_float(
     WINDOW_STATS* const pWnd,

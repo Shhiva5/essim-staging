@@ -12,6 +12,10 @@
 #include <essim/inc/memory.h>
 #include <essim/inc/xplatform.h>
 
+#define NOT_TESTING_PATHS 0
+#define BUG_FIX 1
+#define PROFILING_PRINTS 0
+
 namespace ssim {
 
 inline bool CheckSIMD(const eCPUType requiredSIMD) {

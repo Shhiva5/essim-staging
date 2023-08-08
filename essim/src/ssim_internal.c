@@ -101,17 +101,17 @@ int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS) {
 
   const uint16_t ref_sum = (uint16_t)pWnd->ref_sum;
   const uint16_t cmp_sum = (uint16_t)pWnd->cmp_sum;
-  uint32_t ref_sigma_sqd = (pWnd->ref_sigma_sqd * windowSize_sqd) >> rightShiftBits;
-  uint32_t cmp_sigma_sqd = (pWnd->cmp_sigma_sqd * windowSize_sqd) >> rightShiftBits;
-  uint32_t sigma_both = (pWnd->sigma_both * windowSize_sqd) >> rightShiftBits;
+  uint32_t ref_sigma_sqd = (uint32_t)pWnd->ref_sigma_sqd * windowSize_sqd;
+  uint32_t cmp_sigma_sqd = (uint32_t)pWnd->cmp_sigma_sqd * windowSize_sqd;
+  uint32_t sigma_both = (uint32_t)pWnd->sigma_both * windowSize_sqd;
 
   /* STEP 2. adjust values */
 
-  const uint32_t ref_sum_sqd = (ref_sum * ref_sum) >> rightShiftBits;
+  const uint32_t ref_sum_sqd = ref_sum * ref_sum ;
   ref_sigma_sqd -= ref_sum_sqd;
-  const uint32_t cmp_sum_sqd = (cmp_sum * cmp_sum) >> rightShiftBits;
+  const uint32_t cmp_sum_sqd = cmp_sum * cmp_sum ;
   cmp_sigma_sqd -= cmp_sum_sqd;
-  const uint32_t both_sum_mul = (ref_sum * cmp_sum) >> rightShiftBits;
+  const uint32_t both_sum_mul = ref_sum * cmp_sum;
   /* both sigma_both and both_sum are divided on 2 to avoid
   overflowing while uinsigned -> int casting */
   const int32_t sigma_both_a =
@@ -121,23 +121,67 @@ int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS) {
 
   /* all following 2^8 * 2^8 * windowSize^4.
   to avoid overflowing some values are divided on 2 */
-  const uint32_t a = (both_sum_mul + (C1 >> 1));
+  const uint32_t a = (both_sum_mul >> 1) + (C1 >> 2);
   const int32_t b = (sigma_both_a + (C2 >> 2));
-  const uint32_t c = ((ref_sum_sqd >> 1) + (cmp_sum_sqd  >> 1) + (C1 >> 1));
-  const uint32_t d = ((ref_sigma_sqd >> 1) + (cmp_sigma_sqd >> 1) + (C2 >> 1));
+  const uint32_t c = (ref_sum_sqd >> 2) + (cmp_sum_sqd  >> 2) + (C1 >> 2);
+  const uint32_t d = (ref_sigma_sqd >> 1) + (cmp_sigma_sqd >> 1) + (C2 >> 1);
 
-  const int64_t num = (int64_t)a * b;
+  const int64_t num = (int64_t)a * b * 2;
   const int64_t denom = ((int64_t)c * d);
 
   int power_val;
   uint16_t i16_map_denom = get_best_i16_from_u64((uint64_t)denom, &power_val);
 
-  const int64_t ssim_val = ((((num >> power_val) << 1) * div_lookup_ptr[i16_map_denom]) + SSIMValRtShiftHalfRound)
+  int64_t num_map = (num >> power_val);
+
+  const int64_t ssim_val = (( num_map * div_lookup_ptr[i16_map_denom]) + SSIMValRtShiftHalfRound)
                                 >> SSIMValRtShiftBits;
 
   return ssim_val;
 
 } /* int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS) */
+
+int64_t calc_window_ssim_int_10bd(CALC_WINDOW_SSIM_FORMAL_ARGS) {
+  UNUSED(rightShiftBits);
+  const uint32_t windowSize_sqd = windowSize * windowSize;
+
+  const uint32_t ref_sum = pWnd->ref_sum;
+  const uint32_t cmp_sum = pWnd->cmp_sum;
+  uint64_t ref_sigma_sqd = pWnd->ref_sigma_sqd * windowSize_sqd;
+  uint64_t cmp_sigma_sqd = pWnd->cmp_sigma_sqd * windowSize_sqd;
+  int64_t sigma_both = pWnd->sigma_both * windowSize_sqd;
+
+  /* STEP 2. adjust values */
+
+  const uint64_t ref_sum_sqd = (uint64_t)ref_sum * ref_sum;
+  ref_sigma_sqd -= ref_sum_sqd;
+  const uint64_t cmp_sum_sqd = (uint64_t)cmp_sum * cmp_sum;
+  cmp_sigma_sqd -= cmp_sum_sqd;
+  const uint64_t both_sum_mul = (uint64_t)ref_sum * cmp_sum;
+  sigma_both -= (int64_t)both_sum_mul;
+
+  /* STEP 3. process numbers, do scale */
+
+  /* all following 2^X * 2^X * windowSize^4 */
+  const uint64_t a = 2 * both_sum_mul + C1;
+  const int64_t b = sigma_both + C2 / 2;
+  const uint64_t c = ref_sum_sqd + cmp_sum_sqd + C1;
+  const uint64_t d = ref_sigma_sqd + cmp_sigma_sqd + C2;
+
+  const int64_t num = (int64_t)(a >> 5)  * (b >> 5);
+  const uint64_t denom = ((uint64_t)(c >> 5) * (d >> 5)) >> 1;
+
+  int power_val;
+  uint16_t i16_map_denom = get_best_i16_from_u64((uint64_t)denom, &power_val);
+  int64_t num_map = (num >> power_val);
+
+  //const int64_t ssim_val = (( num_map * div_lookup_ptr[i16_map_denom]))
+  //                              >> SSIMValRtShiftBits;
+  const int64_t ssim_val = (( num_map * div_lookup_ptr[i16_map_denom]) + SSIMValRtShiftHalfRound)
+                                >> SSIMValRtShiftBits;
+  return ssim_val;
+
+} /* int64_t calc_window_ssim_int_10bd(CALC_WINDOW_SSIM_FORMAL_ARGS) */
 #elif !UPDATED_INTEGER_IMPLEMENTATION
 int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS) {
   const uint32_t windowSize_sqd = windowSize * windowSize;
@@ -360,10 +404,10 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   int64_t ssim_mink_sum = 0, ssim_sum = 0;
 
 #if UPDATED_INTEGER_IMPLEMENTATION
-  uint32_t rightShiftBits = NUM_OF_BITS_TO_RIGHTSHIFT + bitDepthMinus8;
+  uint32_t rightShiftBits = bitDepthMinus8 *2;
   int32_t extraRtShiftBitsForSSIMVal = (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
   int64_t mink_pow_ssim_val = 0;
-  float const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
+  int64_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
 #endif
 
   const uint8_t *pSrc = pBuf->p;
@@ -377,8 +421,8 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
     /* windows are summed up from 4x4 regions */
     for (uint32_t y = 0; y < windowSizeDiv4; ++y) {
       for (size_t x = 0; x < windowSizeDiv4; ++x) {
-        wnd.ref_sum += ((uint16_t *)(pSrc + 0 * srcStride))[2 * x + 0];
-        wnd.cmp_sum += ((uint16_t *)(pSrc + 0 * srcStride))[2 * x + 1];
+        wnd.ref_sum += (((uint16_t *)(pSrc + 0 * srcStride))[2 * x + 0]);
+        wnd.cmp_sum += (((uint16_t *)(pSrc + 0 * srcStride))[2 * x + 1]);
         wnd.ref_sigma_sqd += ((uint32_t *)(pSrc + 1 * srcStride))[x];
         wnd.cmp_sigma_sqd += ((uint32_t *)(pSrc + 2 * srcStride))[x];
         wnd.sigma_both += ((uint32_t *)(pSrc + 3 * srcStride))[x];
@@ -438,7 +482,15 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
 
   const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
   const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
-
+#if UPDATED_INTEGER_IMPLEMENTATION
+  const calc_window_ssim_proc_t calc_window_ssim_proc = (bitDepthMinus8==2) ?
+                                                        (calc_window_ssim_int_10bd):
+                                                        (calc_window_ssim_int_16u);
+  int32_t extraRtShiftBitsForSSIMVal = (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int64_t mink_pow_ssim_val = 0;
+  int64_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
+  uint32_t rightShiftBits = (bitDepthMinus8 *2);
+#endif
   int64_t ssim_mink_sum = 0, ssim_sum = 0;
 
   const uint8_t *pSrc = pBuf->p;
@@ -468,13 +520,30 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
 #if UPDATED_INTEGER_IMPLEMENTATION
      /*Last arguments should be IntermediateBitsToRtShift, SSIMValRtShiftBits & SSIMValRtShiftHalfRound,
         this is temperory fix to avoid build errors*/
-    const int64_t ssim_val = calc_window_ssim_int_16u(&wnd, windowSize, C1, C2,
-      0, NULL, 0, 0);
+    const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2,
+                                                  rightShiftBits, div_lookup_ptr,
+                                                  SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+    ssim_sum += ssim_val;
+
+ #if DEBUG_PRINTS
+    if(const_1 < abs(ssim_val)) {
+      printf("WARNING: Overflow can happen in ssim_mink_sum")
+    }
+ #endif
+    int64_t const_1_minus_ssim_val = const_1 - ssim_val;
+    if(SSIM_POOLING_MINKOWSKI_P == 4) {
+      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val * const_1_minus_ssim_val
+                          * const_1_minus_ssim_val;
+    } else {
+      /*SSIM_POOLING_MINKOWSKI_P == 3*/
+      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val * const_1_minus_ssim_val;
+    }
+    ssim_mink_sum += mink_pow_ssim_val;
  #elif !UPDATED_INTEGER_IMPLEMENTATION
     const int64_t ssim_val = calc_window_ssim_int_16u(&wnd, windowSize, C1, C2);
- #endif
     ssim_sum += ssim_val;
     ssim_mink_sum += ssim_val * ssim_val; // TODO replace with (1 - ssim) ** 4
+  #endif
   }
 
   res->ssim_sum += ssim_sum;

@@ -84,6 +84,7 @@ eSSIMResult ssim_compute_8u(float *const pSsimScore, float *const pEssimScore,
   SSIM_CTX_ARRAY *ctx_array =
       ssim_allocate_ctx_array(1, width, height, 0, SSIM_DATA_8BIT, windowSize,
                               windowStride, d2h, mode, flags);
+
   if (NULL == ctx_array) {
     return SSIM_ERR_ALLOC;
   }
@@ -228,7 +229,7 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
                         const uint32_t height, const uint32_t bitDepthMinus8,
                         const eSSIMDataType dataType, const uint32_t windowSize,
                         const uint32_t windowStride, const uint32_t d2h,
-                        const eSSIMMode mode, const eSSIMFlags flags) {
+                        const eSSIMMode eSSIMmode, const eSSIMFlags flags) {
   /* check error(s) */
   if ((0 == width) || (0 == height)) {
     return NULL;
@@ -252,7 +253,14 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
 #if UPDATED_INTEGER_IMPLEMENTATION
   if ((width >= MAX_FRAME_WIDTH) && (height >= MAX_FRAME_HEIGHT)) {
     if(windowStride==4)
-      printf("WARNING : eSSIM precision will be very low");
+      printf("\nWARNING : eSSIM precision will be very low\n");
+  }
+  eSSIMMode mode = SSIM_MODE_PERF_INT;
+  if(bitDepthMinus8 > 2) {
+    mode = SSIM_MODE_PERF_FLOAT;
+    printf("\nWARNING : Bit-depth > 10 only eSSIM Float is supported\n");
+  } else {
+    mode = eSSIMmode;
   }
 #endif
 
@@ -293,8 +301,8 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
                                          : (sum_windows_float_8u);
       }
     } else {
-      p->params.load_4x4_windows_proc = load_4x4_windows_16u;
-      p->params.sum_windows_proc = (SSIM_MODE_PERF_INT == mode)
+    p->params.load_4x4_windows_proc = load_4x4_windows_16u;
+    p->params.sum_windows_proc = (SSIM_MODE_PERF_INT == mode)
                                        ? (sum_windows_int_16u)
                                        : (sum_windows_float_16u);
     }
@@ -304,6 +312,11 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
     p->params.calc_window_ssim_proc = (SSIM_DATA_8BIT == dataType)
                                           ? (calc_window_ssim_int_8u)
                                           : (calc_window_ssim_int_16u);
+#if UPDATED_INTEGER_IMPLEMENTATION
+  if(bitDepthMinus8==2) {
+    p->params.calc_window_ssim_proc = calc_window_ssim_int_10bd;
+  }
+#endif
   }
   p->d2h = d2h;
 
@@ -495,8 +508,8 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
         SSIM_SPATIAL_POOLING_BOTH == ctxa->params.flags) {
       if (numWindows) {
 #if UPDATED_INTEGER_IMPLEMENTATION
-        int64_t avg_ssim_sum =  ssim_sum/(int64_t)numWindows;
-        *pSsimScore = (float)avg_ssim_sum / const_1;
+        double avg_ssim_sum =  (double)ssim_sum/numWindows;
+        *pSsimScore = avg_ssim_sum / const_1;
 #elif !UPDATED_INTEGER_IMPLEMENTATION
         *pSsimScore = ((ssim_sum + (numWindows / 2)) / numWindows) /
                      (1u << SSIM_LOG2_SCALE);
@@ -510,8 +523,8 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
 
       if (numWindows) {
 #if UPDATED_INTEGER_IMPLEMENTATION
-        int64_t avg_ssim_mink_sum =  ssim_mink_sum/(int64_t)numWindows;
-        *pEssimScore = 1.0 - (float)(pow(avg_ssim_mink_sum,
+        double avg_ssim_mink_sum =  (double)ssim_mink_sum/numWindows;
+        *pEssimScore = 1.0 - (double)(pow(avg_ssim_mink_sum,
                                  1.0 / SSIM_POOLING_MINKOWSKI_P))/const_1;
 #elif !UPDATED_INTEGER_IMPLEMENTATION
         // TODO set pEssimScore to equivalent of: 1.0 - (ssim_mink_sum /
