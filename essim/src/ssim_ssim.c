@@ -288,9 +288,17 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
         p->params.sum_windows_proc = (SSIM_MODE_PERF_INT == mode)
                                          ? (sum_windows_8x8_int_8u)
                                          : (sum_windows_float_8u);
-      } else if ((16 == windowSize)) {
+      } else if ((16 == windowSize) && (4 == windowStride)) {
         p->params.sum_windows_proc = (SSIM_MODE_PERF_INT == mode)
-                                         ? (sum_windows_16_int_8u)
+                                         ? (sum_windows_16x4_int_8u)
+                                         : (sum_windows_float_8u);
+      } else if ((16 == windowSize) && (8 == windowStride)) {
+        p->params.sum_windows_proc = (SSIM_MODE_PERF_INT == mode)
+                                         ? (sum_windows_16x8_int_8u)
+                                         : (sum_windows_float_8u);
+      } else if ((16 == windowSize) && (16 == windowStride)) {
+        p->params.sum_windows_proc = (SSIM_MODE_PERF_INT == mode)
+                                         ? (sum_windows_16x16_int_8u)
                                          : (sum_windows_float_8u);
 #endif
       } else if ((12 == windowSize) && (4 == windowStride)) {

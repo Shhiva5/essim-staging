@@ -437,7 +437,13 @@ void sum_windows_12x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
 void sum_windows_8x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
 }
-void sum_windows_16_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
+void sum_windows_16x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_16x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_16x16_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
 }
 #endif

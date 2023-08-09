@@ -769,6 +769,82 @@ void sum_windows_8x4_float_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
 
 #if NEW_SIMD_FUNC
 
+#define calc_window_ssim_8_int_8u_neon() \
+  { \
+    _r0 = vbicq_u32(sum, fullMSB); \
+    _r1 = vshrq_n_u32(sum, 16); \
+    uint32x4_t both_sum_mul = vmulq_u32(_r0, _r1); \
+    uint32x4_t ref_sum_sqd = vmulq_u32(_r0, _r0); \
+    uint32x4_t cmp_sum_sqd = vmulq_u32(_r1, _r1); \
+    ref_sigma_sqd = vsubq_u32(ref_sigma_sqd, ref_sum_sqd); \
+    cmp_sigma_sqd = vsubq_u32(cmp_sigma_sqd, cmp_sum_sqd); \
+    sigma_both_a = vsubq_s32( \
+        vreinterpretq_s32_u32(sigma_both), vreinterpretq_s32_u32(both_sum_mul)); \
+    /* STEP 3. process numbers, do scale */ \
+    a = vaddq_u32(both_sum_mul, halfC1); \
+    b = vaddq_s32(sigma_both_a, halfC2); \
+    c = vaddq_u32(vaddq_u32(ref_sum_sqd, cmp_sum_sqd), fullC1); \
+    ref_sigma_sqd = vshrq_n_u32(ref_sigma_sqd, 1); \
+    cmp_sigma_sqd = vshrq_n_u32(cmp_sigma_sqd, 1); \
+    d = vaddq_u32(vaddq_u32(ref_sigma_sqd, cmp_sigma_sqd), vreinterpretq_u32_s32(halfC2)); \
+    /* process numerators */ \
+    { \
+      int64x2_t _r; \
+      _r = vmull_s32(vget_low_s32(vreinterpretq_s32_u32(a)), vget_low_s32(b)); \
+      vst1q_s64(num + 0, _r); \
+      _r = vmull_high_s32(vreinterpretq_s32_u32(a), b); \
+      vst1q_s64(num + 2, _r); \
+    } \
+    /* process denominators */ \
+    { \
+      int64x2_t _r; \
+      _r = vreinterpretq_s64_u64(vmull_u32(vget_low_u32(c), vget_low_u32(d))); \
+      vst1q_s64(denom + 0, _r); \
+      _r = vreinterpretq_s64_u64(vmull_high_u32(c, d)); \
+      vst1q_s64(denom + 2, _r); \
+    } \
+  } \
+
+#define calc_window_ssim_16_int_8u_neon() \
+  { \
+    /* STEP 2. adjust values */ \
+    _r0 = vbicq_u32(sum, fullMSB); \
+    _r1 = vshrq_n_u32(sum, 16); \
+    uint32x4_t both_sum_mul = vmulq_u32(_r0, _r1); \
+    uint32x4_t ref_sum_sqd = vmulq_u32(_r0, _r0); \
+    uint32x4_t cmp_sum_sqd = vmulq_u32(_r1, _r1); \
+    ref_sigma_sqd = vsubq_u32(ref_sigma_sqd, ref_sum_sqd); \
+    cmp_sigma_sqd = vsubq_u32(cmp_sigma_sqd, cmp_sum_sqd); \
+    sigma_both_a = vreinterpretq_s32_u32(vshrq_n_u32(sigma_both, 1)); \
+    sigma_both_a = vsubq_s32( \
+        sigma_both_a, vreinterpretq_s32_u32(vshrq_n_u32(both_sum_mul, 1))); \
+    /* STEP 3. process numbers, do scale */ \
+    a = vaddq_u32(vshrq_n_u32(both_sum_mul, 1), quarterC1); \
+    b = vaddq_s32(sigma_both_a, quarterC2); \
+    ref_sum_sqd = vshrq_n_u32(ref_sum_sqd, 2); \
+    cmp_sum_sqd = vshrq_n_u32(cmp_sum_sqd, 2); \
+    c = vaddq_u32(vaddq_u32(ref_sum_sqd, cmp_sum_sqd), quarterC1); \
+    ref_sigma_sqd = vshrq_n_u32(ref_sigma_sqd, 1); \
+    cmp_sigma_sqd = vshrq_n_u32(cmp_sigma_sqd, 1); \
+    d = vaddq_u32(vaddq_u32(ref_sigma_sqd, cmp_sigma_sqd), halfC2); \
+    /* process numerators */ \
+    { \
+      int64x2_t _r; \
+      _r = vmull_s32(vreinterpret_s32_u32(vget_low_u32(a)), vget_low_s32(b)); \
+      vst1q_s64(num + 0, _r); \
+      _r = vmull_high_s32(vreinterpretq_s32_u32(a), b); \
+      vst1q_s64(num + 2, _r); \
+    } \
+    /* process denominators */ \
+    { \
+      int64x2_t _r; \
+      _r = vreinterpretq_s64_u64(vmull_u32(vget_low_u32(c), vget_low_u32(d))); \
+      vst1q_s64(denom + 0, _r); \
+      _r = vreinterpretq_s64_u64(vmull_high_u32(c, d)); \
+      vst1q_s64(denom + 2, _r); \
+    } \
+  } \
+
 void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
   enum { WIN_CHUNK = 4, WIN_SIZE = 8 };
   const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
@@ -834,38 +910,10 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     _r0 = vpaddq_u32(_r0, _r1);
     sigma_both = vshlq_n_u32(_r0, 6);
     pSrc += sizeof(uint32_t) * WIN_CHUNK;
-    _r0 = vbicq_u32(sum, fullMSB);
-    _r1 = vshrq_n_u32(sum, 16);
-    uint32x4_t both_sum_mul = vmulq_u32(_r0, _r1);
-    uint32x4_t ref_sum_sqd = vmulq_u32(_r0, _r0);
-    uint32x4_t cmp_sum_sqd = vmulq_u32(_r1, _r1);
-    ref_sigma_sqd = vsubq_u32(ref_sigma_sqd, ref_sum_sqd);
-    cmp_sigma_sqd = vsubq_u32(cmp_sigma_sqd, cmp_sum_sqd);
-    sigma_both_a = vsubq_s32(
-        vreinterpretq_s32_u32(sigma_both), vreinterpretq_s32_u32(both_sum_mul));
-    /* STEP 3. process numbers, do scale */
-    a = vaddq_u32(both_sum_mul, halfC1);
-    b = vaddq_s32(sigma_both_a, halfC2);
-    c = vaddq_u32(vaddq_u32(ref_sum_sqd, cmp_sum_sqd), fullC1);
-    ref_sigma_sqd = vshrq_n_u32(ref_sigma_sqd, 1);
-    cmp_sigma_sqd = vshrq_n_u32(cmp_sigma_sqd, 1);
-    d = vaddq_u32(vaddq_u32(ref_sigma_sqd, cmp_sigma_sqd), vreinterpretq_u32_s32(halfC2));
-    /* process numerators */
-    {
-      int64x2_t _r;
-      _r = vmull_s32(vget_low_s32(vreinterpretq_s32_u32(a)), vget_low_s32(b));
-      vst1q_s64(num + 0, _r);
-      _r = vmull_high_s32(vreinterpretq_s32_u32(a), b);
-      vst1q_s64(num + 2, _r);
-    }
-    /* process denominators */
-    {
-      int64x2_t _r;
-      _r = vreinterpretq_s64_u64(vmull_u32(vget_low_u32(c), vget_low_u32(d)));
-      vst1q_s64(denom + 0, _r);
-      _r = vreinterpretq_s64_u64(vmull_high_u32(c, d));
-      vst1q_s64(denom + 2, _r);
-    }
+    // CALC
+
+    calc_window_ssim_8_int_8u_neon();
+
     int power_val;
     uint16_t i16_map_denom;
     int64_t ssim_val;
@@ -946,46 +994,15 @@ void sum_windows_8x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     ref_sigma_sqd = vshlq_n_u32(ref_sigma_sqd, 6);
     cmp_sigma_sqd = vshlq_n_u32(cmp_sigma_sqd, 6);
     sigma_both = vshlq_n_u32(sigma_both, 6);
-    /* STEP 2. adjust values */
-    _r0 = vbicq_u32(sum, fullMSB);
-    _r1 = vshrq_n_u32(sum, 16);
-    uint32x4_t both_sum_mul = vmulq_u32(_r0, _r1);
-    uint32x4_t ref_sum_sqd = vmulq_u32(_r0, _r0);
-    uint32x4_t cmp_sum_sqd = vmulq_u32(_r1, _r1);
-    ref_sigma_sqd = vsubq_u32(ref_sigma_sqd, ref_sum_sqd);
-    cmp_sigma_sqd = vsubq_u32(cmp_sigma_sqd, cmp_sum_sqd);
-    sigma_both_a = vsubq_s32(
-        vreinterpretq_s32_u32(sigma_both), vreinterpretq_s32_u32(both_sum_mul));
-    /* STEP 3. process numbers, do scale */
-    a = vaddq_u32(both_sum_mul, halfC1);
-    b = vaddq_s32(sigma_both_a, halfC2);
-    c = vaddq_u32(vaddq_u32(ref_sum_sqd, cmp_sum_sqd), fullC1);
-    ref_sigma_sqd = vshrq_n_u32(ref_sigma_sqd, 1);
-    cmp_sigma_sqd = vshrq_n_u32(cmp_sigma_sqd, 1);
-    d = vaddq_u32(vaddq_u32(ref_sigma_sqd, cmp_sigma_sqd), vreinterpretq_u32_s32(halfC2));
-    /* process numerators */
-    {
-      int64x2_t _r;
-      _r = vmull_s32(vget_low_s32(vreinterpretq_s32_u32(a)), vget_low_s32(b));
-      vst1q_s64(num + 0, _r);
-      _r = vmull_high_s32(vreinterpretq_s32_u32(a), b);
-      vst1q_s64(num + 2, _r);
-    }
-    /* process denominators */
-    {
-      int64x2_t _r;
-      _r = vreinterpretq_s64_u64(vmull_u32(vget_low_u32(c), vget_low_u32(d)));
-      vst1q_s64(denom + 0, _r);
-      _r = vreinterpretq_s64_u64(vmull_high_u32(c, d));
-      vst1q_s64(denom + 2, _r);
-    }
+    
+    calc_window_ssim_8_int_8u_neon();
+
     int power_val;
     uint16_t i16_map_denom;
     int64_t ssim_val;
     for (size_t w = 0; w < WIN_CHUNK; ++w) {
       i16_map_denom = get_best_i16_from_u64((uint64_t)denom[w], &power_val);
       ssim_val = ((((num[w] >> power_val) << 1) * div_lookup_ptr[i16_map_denom]) + SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
-      // printf("%ld ", ssim_val);
       ssim_sum += ssim_val;
       int64_t const_1_minus_ssim_val = const_1 - ssim_val;
       if(SSIM_POOLING_MINKOWSKI_P == 4) {
@@ -1007,11 +1024,21 @@ void sum_windows_8x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
   }
 }
 
+void sum_windows_16x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS){
+  sum_windows_16_int_8u_neon(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_16x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS){
+  sum_windows_16_int_8u_neon(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_16x16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS){
+  sum_windows_16_int_8u_neon(SUM_WINDOWS_ACTUAL_ARGS);
+}
+
 void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
   enum { WIN_CHUNK = 4, WIN_SIZE = 16 };
   const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
   const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
-  const uint32x4_t halfC1 = vdupq_n_u32(C1 / 2);
+  const uint32x4_t quarterC1 = vdupq_n_u32(C1 / 4);
   const uint32x4_t halfC2 = vdupq_n_u32(C2 / 2);
   const int32x4_t quarterC2 = vdupq_n_s32(C2 / 4);
   const uint32x4_t fullMSB = vdupq_n_u32(MSB);
@@ -1071,42 +1098,9 @@ void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     ref_sigma_sqd = vshlq_n_u32(ref_sigma_sqd, 8);
     cmp_sigma_sqd = vshlq_n_u32(cmp_sigma_sqd, 8);
     sigma_both = vshlq_n_u32(sigma_both, 8);
-    /* STEP 2. adjust values */
-    _r0 = vbicq_u32(sum, fullMSB);
-    _r1 = vshrq_n_u32(sum, 16);
-    uint32x4_t both_sum_mul = vmulq_u32(_r0, _r1);
-    uint32x4_t ref_sum_sqd = vmulq_u32(_r0, _r0);
-    uint32x4_t cmp_sum_sqd = vmulq_u32(_r1, _r1);
-    ref_sigma_sqd = vsubq_u32(ref_sigma_sqd, ref_sum_sqd);
-    cmp_sigma_sqd = vsubq_u32(cmp_sigma_sqd, cmp_sum_sqd);
-    sigma_both_a = vreinterpretq_s32_u32(vshrq_n_u32(sigma_both, 1));
-    sigma_both_a = vsubq_s32(
-        sigma_both_a, vreinterpretq_s32_u32(vshrq_n_u32(both_sum_mul, 1)));
-    /* STEP 3. process numbers, do scale */
-    a = vaddq_u32(both_sum_mul, halfC1);
-    b = vaddq_s32(sigma_both_a, quarterC2);
-    ref_sum_sqd = vshrq_n_u32(ref_sum_sqd, 1);
-    cmp_sum_sqd = vshrq_n_u32(cmp_sum_sqd, 1);
-    c = vaddq_u32(vaddq_u32(ref_sum_sqd, cmp_sum_sqd), halfC1);
-    ref_sigma_sqd = vshrq_n_u32(ref_sigma_sqd, 1);
-    cmp_sigma_sqd = vshrq_n_u32(cmp_sigma_sqd, 1);
-    d = vaddq_u32(vaddq_u32(ref_sigma_sqd, cmp_sigma_sqd), halfC2);
-    /* process numerators */
-    {
-      int64x2_t _r;
-      _r = vmull_s32(vreinterpret_s32_u32(vget_low_u32(a)), vget_low_s32(b));
-      vst1q_s64(num + 0, _r);
-      _r = vmull_high_s32(vreinterpretq_s32_u32(a), b);
-      vst1q_s64(num + 2, _r);
-    }
-    /* process denominators */
-    {
-      int64x2_t _r;
-      _r = vreinterpretq_s64_u64(vmull_u32(vget_low_u32(c), vget_low_u32(d)));
-      vst1q_s64(denom + 0, _r);
-      _r = vreinterpretq_s64_u64(vmull_high_u32(c, d));
-      vst1q_s64(denom + 2, _r);
-    }
+
+    calc_window_ssim_16_int_8u_neon();
+
     int power_val;
     uint16_t i16_map_denom;
     int64_t ssim_val;
@@ -1114,7 +1108,6 @@ void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
       i16_map_denom = get_best_i16_from_u64((uint64_t)denom[w], &power_val);
       ssim_val = ((((num[w] >> power_val) << 1) * div_lookup_ptr[i16_map_denom]) + SSIMValRtShiftHalfRound)
                                 >> SSIMValRtShiftBits;
-      // printf("%ld ", ssim_val);
       ssim_sum += ssim_val;
       int64_t const_1_minus_ssim_val = const_1 - ssim_val;
       if(SSIM_POOLING_MINKOWSKI_P == 4) {

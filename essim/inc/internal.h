@@ -68,6 +68,7 @@ Based on above cases, we consider SSIM_ACCUMULATED_SUM maximum value can be
 
 #if NEW_SIMD_FUNC
 #define MSB 4294901760 //2^32-2^16
+#define LSB 65535 //2^16
 #endif
 /*Max WxH = 3840x2160
   Max WindowSize = 16x16
@@ -332,7 +333,9 @@ void sum_windows_8x4_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 #if NEW_SIMD_FUNC
 void sum_windows_8x8_int_8u(SUM_WINDOWS_FORMAL_ARGS);
-void sum_windows_16_int_8u(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_int_8u(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_int_8u(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 #endif
 void sum_windows_float_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_float_8u(SUM_WINDOWS_FORMAL_ARGS);
@@ -352,7 +355,9 @@ void sum_windows_8x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 #if NEW_SIMD_FUNC
 void sum_windows_8x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
-void sum_windows_16_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 #endif
 void sum_windows_float_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_float_8u_c(SUM_WINDOWS_FORMAL_ARGS);
@@ -377,6 +382,14 @@ void load_4x4_windows_16u_avx2(LOAD_4x4_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_int_8u_sse41(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_int_8u_sse41(SUM_WINDOWS_FORMAL_ARGS);
 
+#if NEW_SIMD_FUNC
+void sum_windows_8x4_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_8x8_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
+#endif
+
 void sum_windows_8x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS);
@@ -393,6 +406,9 @@ void sum_windows_8x4_float_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
 
 #if NEW_SIMD_FUNC
 void sum_windows_8x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
 #endif
 
