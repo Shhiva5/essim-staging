@@ -19,6 +19,8 @@ extern "C" {
 #endif /* defined(__cplusplus) */
 
 #define UPDATED_INTEGER_IMPLEMENTATION 1
+#define PROFILING_PRINTS 0
+#define DEBUG_PRINTS 0
 
 typedef enum eSSIMResult {
   SSIM_OK = 0,

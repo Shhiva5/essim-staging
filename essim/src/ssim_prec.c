@@ -95,7 +95,8 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
 
 #if UPDATED_INTEGER_IMPLEMENTATION
   uint32_t rightShiftBits = (bitDepthMinus8 * 2);
-  int32_t extraRtShiftBitsForSSIMVal = (int32_t)ctx->SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int32_t extraRtShiftBitsForSSIMVal =
+          (int32_t)ctx->SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
   int64_t mink_pow_ssim_val = 0;
   int64_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
 #endif
@@ -118,18 +119,31 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
       src.ref = AdvancePointer(src.ref, windowStep);
       src.cmp = AdvancePointer(src.cmp, windowStep);
 #if UPDATED_INTEGER_IMPLEMENTATION
-      const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2,
-        rightShiftBits, ctx->div_lookup_ptr, ctx->SSIMValRtShiftBits,
-        ctx->SSIMValRtShiftHalfRound);
-
+      int64_t ssim_val;
+      if(bitDepthMinus8 == 0) {
+        WINDOW_STATS_8BD wnd_temp;
+        wnd_temp.ref_sum = (uint16_t)wnd.ref_sum;
+        wnd_temp.cmp_sum = (uint16_t)wnd.cmp_sum;
+        wnd_temp.ref_sigma_sqd = (uint32_t)wnd.ref_sigma_sqd;
+        wnd_temp.cmp_sigma_sqd = (uint32_t)wnd.cmp_sigma_sqd;
+        wnd_temp.sigma_both = (uint32_t)wnd.sigma_both;
+        ssim_val = calc_window_ssim_int_8u(&wnd_temp, windowSize, C1, C2,
+                    rightShiftBits, ctx->div_lookup_ptr, ctx->SSIMValRtShiftBits,
+                    ctx->SSIMValRtShiftHalfRound);
+      } else {
+        ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2,
+                    rightShiftBits, ctx->div_lookup_ptr, ctx->SSIMValRtShiftBits,
+                    ctx->SSIMValRtShiftHalfRound);
+      }
       ssim_sum += ssim_val;
       int64_t const_1_minus_ssim_val = const_1 - ssim_val;
       if(SSIM_POOLING_MINKOWSKI_P == 4) {
-        mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val * const_1_minus_ssim_val
-                          * const_1_minus_ssim_val;
+        mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
+                          * const_1_minus_ssim_val * const_1_minus_ssim_val;
       } else {
         /*SSIM_POOLING_MINKOWSKI_P == 3*/
-        mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val * const_1_minus_ssim_val;
+        mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
+                            * const_1_minus_ssim_val;
       }
       ssim_mink_sum += mink_pow_ssim_val;
 #elif !UPDATED_INTEGER_IMPLEMENTATION

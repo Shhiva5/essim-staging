@@ -291,6 +291,16 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
         p->params.sum_windows_proc = (SSIM_MODE_PERF_INT == mode)
                                          ? (sum_windows_8x4_int_8u)
                                          : (sum_windows_8x4_float_8u);
+#if NEW_SIMD_FUNC
+      } else if ((8 == windowSize) && (8 == windowStride)) {
+        p->params.sum_windows_proc = (SSIM_MODE_PERF_INT == mode)
+                                         ? (sum_windows_8x8_int_8u)
+                                         : (sum_windows_float_8u);
+      } else if ((16 == windowSize)) {
+        p->params.sum_windows_proc = (SSIM_MODE_PERF_INT == mode)
+                                         ? (sum_windows_16_int_8u)
+                                         : (sum_windows_float_8u);
+#endif
       } else if ((12 == windowSize) && (4 == windowStride)) {
         p->params.sum_windows_proc = (SSIM_MODE_PERF_INT == mode)
                                          ? (sum_windows_12x4_int_8u)
@@ -309,13 +319,17 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
   } else {
     p->params.load_window_proc =
         (SSIM_DATA_8BIT == dataType) ? (load_window_8u_c) : (load_window_16u_c);
-    p->params.calc_window_ssim_proc = (SSIM_DATA_8BIT == dataType)
+#if UPDATED_INTEGER_IMPLEMENTATION
+    if(bitDepthMinus8 ==2 ) {
+      p->params.calc_window_ssim_proc = calc_window_ssim_int_10bd;
+    } else {
+      p->params.calc_window_ssim_proc = calc_window_ssim_int_16u;
+    }
+
+#else
+p->params.calc_window_ssim_proc = (SSIM_DATA_8BIT == dataType)
                                           ? (calc_window_ssim_int_8u)
                                           : (calc_window_ssim_int_16u);
-#if UPDATED_INTEGER_IMPLEMENTATION
-  if(bitDepthMinus8==2) {
-    p->params.calc_window_ssim_proc = calc_window_ssim_int_10bd;
-  }
 #endif
   }
   p->d2h = d2h;
@@ -500,7 +514,8 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
 #endif
     }
 #if UPDATED_INTEGER_IMPLEMENTATION
-    int32_t extraRtShiftBitsForSSIMVal = (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+    int32_t extraRtShiftBitsForSSIMVal =
+            (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
     uint32_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
 #endif
 

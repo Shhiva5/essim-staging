@@ -26,9 +26,10 @@ extern "C" {
 
 enum { LOG2_ALIGN = 6, ALIGN = 1 << LOG2_ALIGN };
 
-#define DEBUG_PRINTS 0
 #define INTR_PROFILING_PRINTS 0
 #define ENABLE_ONLY_C_PATH 1
+#define ARM64_SIMD_FIX 1
+#define NEW_SIMD_FUNC 1
 
 #define ENABLE_MINK_3 0 //Default mink_4 is choosen
 
@@ -63,6 +64,9 @@ Based on above cases, we consider SSIM_ACCUMULATED_SUM maximum value can be
 
 #define div_Q_factor 1073741824  //2^30
 
+#if NEW_SIMD_FUNC
+#define MSB 4294901760 //2^32-2^16
+#endif
 /*Max WxH = 3840x2160
   Max WindowSize = 16x16
   Min windowStride = 4
@@ -81,6 +85,15 @@ typedef struct WINDOW_STATS {
   uint64_t sigma_both;
 } WINDOW_STATS;
 
+#if UPDATED_INTEGER_IMPLEMENTATION
+typedef struct WINDOW_STATS_8BD {
+  uint16_t ref_sum;
+  uint32_t cmp_sum;
+  uint32_t ref_sigma_sqd;
+  uint32_t cmp_sigma_sqd;
+  uint32_t sigma_both;
+} WINDOW_STATS_8BD;
+#endif
 /* the temporal buffer has the following structure:
 a row of 16u(32u) interleaving sum values for ref and cmp,
 a row of 32u(64u) ref squared values,
@@ -137,6 +150,13 @@ typedef struct SSIM_SRC {
 #define LOAD_WINDOW_ACTUAL_ARGS pWnd, pSrc, windowSize
 
 #if UPDATED_INTEGER_IMPLEMENTATION
+#define CALC_WINDOW_SSIM_8BD_FORMAL_ARGS                                     \
+  WINDOW_STATS_8BD *const pWnd, const uint32_t windowSize, const uint32_t C1, \
+      const uint32_t C2, uint32_t rightShiftBits, uint32_t* div_lookup_ptr, \
+      uint32_t SSIMValRtShiftBits, uint32_t SSIMValRtShiftHalfRound
+#define CALC_WINDOW_SSIM_8BD_ACTUAL_ARGS pWnd, windowSize, C1, C2, rightShiftBits,\
+  div_lookup_ptr, SSIMValRtShiftBits SSIMValRtShiftHalfRound
+
 #define CALC_WINDOW_SSIM_FORMAL_ARGS                                      \
   WINDOW_STATS *const pWnd, const uint32_t windowSize, const uint32_t C1, \
       const uint32_t C2, uint32_t rightShiftBits, uint32_t* div_lookup_ptr, \
@@ -286,9 +306,11 @@ uint16_t get_best_i16_from_u64(uint64_t temp, int *power);
 void load_window_8u_c(LOAD_WINDOW_FORMAL_ARGS);
 void load_window_16u_c(LOAD_WINDOW_FORMAL_ARGS);
 
-int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS);
 #if UPDATED_INTEGER_IMPLEMENTATION
+int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_8BD_FORMAL_ARGS);
 int64_t calc_window_ssim_int_10bd(CALC_WINDOW_SSIM_FORMAL_ARGS);
+#else
+int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS);
 #endif
 int64_t calc_window_ssim_int_16u(CALC_WINDOW_SSIM_FORMAL_ARGS);
 float calc_window_ssim_float(
@@ -321,6 +343,10 @@ void load_4x4_windows_8u(LOAD_4x4_WINDOWS_FORMAL_ARGS);
 void sum_windows_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_int_8u(SUM_WINDOWS_FORMAL_ARGS);
+#if NEW_SIMD_FUNC
+void sum_windows_8x8_int_8u(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_int_8u(SUM_WINDOWS_FORMAL_ARGS);
+#endif
 void sum_windows_float_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_float_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_float_8u(SUM_WINDOWS_FORMAL_ARGS);
@@ -337,6 +363,10 @@ void load_4x4_windows_8u_c(LOAD_4x4_WINDOWS_FORMAL_ARGS);
 void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
+#if NEW_SIMD_FUNC
+void sum_windows_8x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
+#endif
 void sum_windows_float_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_float_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_float_8u_c(SUM_WINDOWS_FORMAL_ARGS);
@@ -373,6 +403,10 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
 
 void sum_windows_8x4_float_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
+#if NEW_SIMD_FUNC
+void sum_windows_8x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
+#endif
 
 #endif /* defined(_X86) || defined(_X64) */
 

@@ -96,14 +96,14 @@ uint16_t get_best_i16_from_u64(uint64_t temp, int *power) {
     return (uint16_t) temp;
 } /*uint16_t get_best_i16_from_u64(uint64_t temp, int *power)*/
 
-int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS) {
+int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_8BD_FORMAL_ARGS) {
   const uint32_t windowSize_sqd = windowSize * windowSize;
 
-  const uint16_t ref_sum = (uint16_t)pWnd->ref_sum;
-  const uint16_t cmp_sum = (uint16_t)pWnd->cmp_sum;
-  uint32_t ref_sigma_sqd = (uint32_t)pWnd->ref_sigma_sqd * windowSize_sqd;
-  uint32_t cmp_sigma_sqd = (uint32_t)pWnd->cmp_sigma_sqd * windowSize_sqd;
-  uint32_t sigma_both = (uint32_t)pWnd->sigma_both * windowSize_sqd;
+  const uint16_t ref_sum = pWnd->ref_sum;
+  const uint16_t cmp_sum = pWnd->cmp_sum;
+  uint32_t ref_sigma_sqd = pWnd->ref_sigma_sqd * windowSize_sqd;
+  uint32_t cmp_sigma_sqd = pWnd->cmp_sigma_sqd * windowSize_sqd;
+  uint32_t sigma_both = pWnd->sigma_both * windowSize_sqd;
 
   /* STEP 2. adjust values */
 
@@ -134,8 +134,8 @@ int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS) {
 
   int64_t num_map = (num >> power_val);
 
-  const int64_t ssim_val = (( num_map * div_lookup_ptr[i16_map_denom]) + SSIMValRtShiftHalfRound)
-                                >> SSIMValRtShiftBits;
+  const int64_t ssim_val = (( num_map * div_lookup_ptr[i16_map_denom])
+                            + SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
 
   return ssim_val;
 
@@ -175,10 +175,8 @@ int64_t calc_window_ssim_int_10bd(CALC_WINDOW_SSIM_FORMAL_ARGS) {
   uint16_t i16_map_denom = get_best_i16_from_u64((uint64_t)denom, &power_val);
   int64_t num_map = (num >> power_val);
 
-  //const int64_t ssim_val = (( num_map * div_lookup_ptr[i16_map_denom]))
-  //                              >> SSIMValRtShiftBits;
-  const int64_t ssim_val = (( num_map * div_lookup_ptr[i16_map_denom]) + SSIMValRtShiftHalfRound)
-                                >> SSIMValRtShiftBits;
+  const int64_t ssim_val = (( num_map * div_lookup_ptr[i16_map_denom])
+                            + SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
   return ssim_val;
 
 } /* int64_t calc_window_ssim_int_10bd(CALC_WINDOW_SSIM_FORMAL_ARGS) */
@@ -405,7 +403,8 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
 
 #if UPDATED_INTEGER_IMPLEMENTATION
   uint32_t rightShiftBits = bitDepthMinus8 *2;
-  int32_t extraRtShiftBitsForSSIMVal = (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int32_t extraRtShiftBitsForSSIMVal =
+          (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
   int64_t mink_pow_ssim_val = 0;
   int64_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
 #endif
@@ -414,8 +413,11 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   const ptrdiff_t srcStride = pBuf->stride;
 
   for (size_t i = 0; i < numWindows; ++i) {
-    WINDOW_STATS wnd = {0};
-
+#if UPDATED_INTEGER_IMPLEMENTATION
+    WINDOW_STATS_8BD wnd = {0};
+#else
+     WINDOW_STATS wnd = {0};
+#endif
     /* STEP 1. load data, no scaling */
 
     /* windows are summed up from 4x4 regions */
@@ -441,18 +443,19 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
     ssim_sum += ssim_val;
 
  #if DEBUG_PRINTS
-    if(const_1 < abs(ssim_val)) {
-      printf("WARNING: Overflow can happen in ssim_mink_sum")
+    if(const_1 < abs((int)ssim_val)) {
+      printf("WARNING: Overflow can happen in ssim_mink_sum");
     }
  #endif
 
     int64_t const_1_minus_ssim_val = const_1 - ssim_val;
     if(SSIM_POOLING_MINKOWSKI_P == 4) {
-      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val * const_1_minus_ssim_val
-                          * const_1_minus_ssim_val;
+      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
+                          * const_1_minus_ssim_val* const_1_minus_ssim_val;
     } else {
       /*SSIM_POOLING_MINKOWSKI_P == 3*/
-      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val * const_1_minus_ssim_val;
+      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
+                          * const_1_minus_ssim_val;
     }
     ssim_mink_sum += mink_pow_ssim_val;
 #elif !UPDATED_INTEGER_IMPLEMENTATION
@@ -477,6 +480,14 @@ void sum_windows_12x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
 }
 
+#if NEW_SIMD_FUNC
+void sum_windows_8x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_16_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+#endif
 void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
   const uint32_t windowSizeDiv4 = windowSize / 4;
 
@@ -486,7 +497,8 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
   const calc_window_ssim_proc_t calc_window_ssim_proc = (bitDepthMinus8==2) ?
                                                         (calc_window_ssim_int_10bd):
                                                         (calc_window_ssim_int_16u);
-  int32_t extraRtShiftBitsForSSIMVal = (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int32_t extraRtShiftBitsForSSIMVal =
+          (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
   int64_t mink_pow_ssim_val = 0;
   int64_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
   uint32_t rightShiftBits = (bitDepthMinus8 *2);
@@ -518,25 +530,24 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
     /* set the next window */
     pSrc = AdvancePointer(pSrc, windowStep - srcStride * windowSize);
 #if UPDATED_INTEGER_IMPLEMENTATION
-     /*Last arguments should be IntermediateBitsToRtShift, SSIMValRtShiftBits & SSIMValRtShiftHalfRound,
-        this is temperory fix to avoid build errors*/
     const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2,
-                                                  rightShiftBits, div_lookup_ptr,
-                                                  SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+                             rightShiftBits, div_lookup_ptr,
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
     ssim_sum += ssim_val;
 
  #if DEBUG_PRINTS
-    if(const_1 < abs(ssim_val)) {
-      printf("WARNING: Overflow can happen in ssim_mink_sum")
+    if(const_1 < abs((int)ssim_val)) {
+      printf("WARNING: Overflow can happen in ssim_mink_sum");
     }
  #endif
     int64_t const_1_minus_ssim_val = const_1 - ssim_val;
     if(SSIM_POOLING_MINKOWSKI_P == 4) {
-      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val * const_1_minus_ssim_val
-                          * const_1_minus_ssim_val;
+      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
+                          * const_1_minus_ssim_val * const_1_minus_ssim_val;
     } else {
       /*SSIM_POOLING_MINKOWSKI_P == 3*/
-      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val * const_1_minus_ssim_val;
+      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
+                          * const_1_minus_ssim_val;
     }
     ssim_mink_sum += mink_pow_ssim_val;
  #elif !UPDATED_INTEGER_IMPLEMENTATION
@@ -590,7 +601,6 @@ void sum_windows_float_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
     ssim_mink_sum += pow(1 - ssim_val, SSIM_POOLING_MINKOWSKI_P);
   }
 
-  //printf("\n In float ssim_sum: %f , ssim_mink_sum : %f ",ssim_sum, ssim_mink_sum );
   res->ssim_sum_f += ssim_sum;
   res->ssim_mink_sum_f += ssim_mink_sum;
   res->numWindows += numWindows;
