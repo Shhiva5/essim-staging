@@ -183,8 +183,12 @@ TEST(ssimTest, threading_10bit) {
     const size_t width = dim.width;
     const size_t height = dim.height;
     const uint32_t bitDepthMinus8 = 2;
-    // allocate frames
+#if BUG_FIX
+    uint16_t maxValue = (1 << (bitDepthMinus8+8)) -1;
+#else
     auto maxValue = std::numeric_limits<uint16_t>::max();
+#endif
+    // allocate frames
     auto [pRef, refStride] =
         AllocateAndFill<uint16_t>(pRefAllocated, width, height, maxValue);
 

@@ -67,16 +67,23 @@ ARM CPUs you can use the `CMAKE_OSX_ARCHITECTURES` flag
 cmake .. -DCMAKE_OSX_ARCHITECTURES=x86_64
 ```
 
-##eSSIM score by reading from reference and distorted files
-First build the project.
+## Build testsuite for eSSIM score by reading reference and distorted files
 
+First build the project.
 While building the project, don't skip building tests.
 
 Copy "essim-staging/yuvtestsuite/gtest_main.cc" file to
 "build/_deps/googletest-src/googletest/src/"
 
-Copy "essim-staging/yuvtestsuite/CMakeLists.txt" file to
-"build/_deps/googletest-src/googletest/"
+In below mentioned file add "essim" folder path in "gtest_build_include_dirs".
+"build/_deps/googletest-src/googletest/CMakeLists.txt".
+
+Example is shown here :
+
+set(gtest_build_include_dirs
+  "${gtest_SOURCE_DIR}/../../../../essim"
+  "${gtest_SOURCE_DIR}/include"
+  "${gtest_SOURCE_DIR}")
 
 To get eSSIM score for ref & dist YUV files, enable
 "FR_LVL_eSSIM_SUPPORT" macro which is present in "gtest_main.cc" file.
