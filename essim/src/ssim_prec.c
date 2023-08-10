@@ -119,22 +119,10 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
       src.ref = AdvancePointer(src.ref, windowStep);
       src.cmp = AdvancePointer(src.cmp, windowStep);
 #if UPDATED_INTEGER_IMPLEMENTATION
-      int64_t ssim_val;
-      if(bitDepthMinus8 == 0) {
-        WINDOW_STATS_8BD wnd_temp;
-        wnd_temp.ref_sum = (uint16_t)wnd.ref_sum;
-        wnd_temp.cmp_sum = (uint16_t)wnd.cmp_sum;
-        wnd_temp.ref_sigma_sqd = (uint32_t)wnd.ref_sigma_sqd;
-        wnd_temp.cmp_sigma_sqd = (uint32_t)wnd.cmp_sigma_sqd;
-        wnd_temp.sigma_both = (uint32_t)wnd.sigma_both;
-        ssim_val = calc_window_ssim_int_8u(&wnd_temp, windowSize, C1, C2,
+      const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2,
                     rightShiftBits, ctx->div_lookup_ptr, ctx->SSIMValRtShiftBits,
                     ctx->SSIMValRtShiftHalfRound);
-      } else {
-        ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2,
-                    rightShiftBits, ctx->div_lookup_ptr, ctx->SSIMValRtShiftBits,
-                    ctx->SSIMValRtShiftHalfRound);
-      }
+
       ssim_sum += ssim_val;
       int64_t const_1_minus_ssim_val = const_1 - ssim_val;
       if(SSIM_POOLING_MINKOWSKI_P == 4) {

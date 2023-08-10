@@ -445,4 +445,518 @@ void sum_windows_12x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
 
 } /* void sum_windows_12x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) */
 
+#if NEW_SIMD_FUNC
+
+#define calc_window_ssim_int_8u_avx2() \
+  { \
+    /* STEP 2. adjust values */ \
+    _r0 = _mm256_and_si256(sum, fullLSB); \
+    _r1 = _mm256_srli_epi32(sum, 16); \
+    __m256i both_sum_mul = _mm256_mullo_epi32(_r0, _r1); \
+    __m256i ref_sum_sqd = _mm256_mullo_epi32(_r0, _r0); \
+    __m256i cmp_sum_sqd = _mm256_mullo_epi32(_r1, _r1); \
+    ref_sigma_sqd = _mm256_sub_epi32(ref_sigma_sqd, ref_sum_sqd); \
+    cmp_sigma_sqd = _mm256_sub_epi32(cmp_sigma_sqd, cmp_sum_sqd); \
+    sigma_both_a = _mm256_sub_epi32(_mm256_srli_epi32(sigma_both, 1), \
+                   _mm256_srli_epi32(both_sum_mul, 1)); \
+    /* STEP 3. process numbers, do scale */ \
+    a = _mm256_add_epi32(_mm256_srli_epi32(both_sum_mul, 1), quarterC1); \
+    b = _mm256_add_epi32(sigma_both_a, quarterC2); \
+    ref_sum_sqd = _mm256_srli_epi32(ref_sum_sqd, 2); \
+    cmp_sum_sqd = _mm256_srli_epi32(cmp_sum_sqd, 2); \
+    c = _mm256_add_epi32(_mm256_add_epi32(ref_sum_sqd, cmp_sum_sqd), quarterC1); \
+    ref_sigma_sqd = _mm256_srli_epi32(ref_sigma_sqd, 1); \
+    cmp_sigma_sqd = _mm256_srli_epi32(cmp_sigma_sqd, 1); \
+    d = _mm256_add_epi32(_mm256_add_epi32(ref_sigma_sqd, cmp_sigma_sqd), halfC2); \
+    /* process numerators */ \
+    _r0 = _mm256_mul_epi32(a, b); \
+    _r1 = _mm256_mul_epi32(_mm256_srli_epi64(a, 32), _mm256_srli_epi64(b, 32)); \
+    _mm256_storeu_si256((__m256i *)num + 0, _r0); \
+    _mm256_storeu_si256((__m256i *)num + 1, _r1); \
+    /* process denominators */ \
+    _r0 = _mm256_mul_epi32(c, d); \
+    _r1 = _mm256_mul_epi32(_mm256_srli_epi64(c, 32), _mm256_srli_epi64(d, 32)); \
+    _mm256_storeu_si256((__m256i *)denom + 0, _r0); \
+    _mm256_storeu_si256((__m256i *)denom + 1, _r1); \
+  } \
+
+void sum_windows_8x4_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
+  enum { WIN_CHUNK = 8, WIN_SIZE = 8 };
+  const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
+  const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
+  const uint8_t *pSrc = pBuf->p;
+  const ptrdiff_t srcStride = pBuf->stride;
+  int64_t num[WIN_CHUNK];
+  int64_t denom[WIN_CHUNK];
+  int32_t extraRtShiftBitsForSSIMVal =
+          (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int64_t mink_pow_ssim_val = 0;
+  float const_1 =
+        1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
+  size_t i = 0;
+  const __m256i quarterC1 = _mm256_set1_epi32(C1>>2);
+  const __m256i halfC2 = _mm256_set1_epi32(C2>>1);
+  const __m256i quarterC2 = _mm256_set1_epi32(C2>>2);
+  const __m256i fullLSB = _mm256_set1_epi32(LSB);
+  __m256i a, b, c, d, sigma_both_a;
+  for (; i + WIN_CHUNK <= numWindows; i += WIN_CHUNK) {
+    const uint8_t *pSrcNext = pSrc + 4 * srcStride;
+    __m256i sum;
+    __m256i ref_sigma_sqd;
+    __m256i cmp_sigma_sqd;
+    __m256i sigma_both;
+    __m256i _r0, _r1, _r2, _r3, _r4;
+    for (uint32_t x = 0; x <= 4; x+=4) {
+      sum = _r1;
+      ref_sigma_sqd = _r2;
+      cmp_sigma_sqd = _r3;
+      sigma_both = _r4;
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + x));
+      _r1 = _mm256_loadu_si256((const __m256i *)(pSrcNext + x));
+      _r1 = _mm256_add_epi32(_r0, _r1);
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + x + srcStride));
+      _r2 = _mm256_loadu_si256((const __m256i *)(pSrcNext + x + srcStride));
+      _r2 = _mm256_add_epi32(_r0, _r2);
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + x + 2*srcStride));
+      _r3 = _mm256_loadu_si256((const __m256i *)(pSrcNext + x + 2*srcStride));
+      _r3 = _mm256_add_epi32(_r0, _r3);
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + x + 3*srcStride));
+      _r4 = _mm256_loadu_si256((const __m256i *)(pSrcNext + x + 3*srcStride));
+      _r4 = _mm256_add_epi32(_r0, _r4);
+    }
+    sum = _mm256_hadd_epi32(sum, _r1);
+    ref_sigma_sqd = _mm256_hadd_epi32(ref_sigma_sqd, _r2);
+    cmp_sigma_sqd = _mm256_hadd_epi32(cmp_sigma_sqd, _r3);
+    sigma_both = _mm256_hadd_epi32(sigma_both, _r4);
+    pSrc += sizeof(uint32_t) * 8;
+    // CALC
+    ref_sigma_sqd = _mm256_slli_epi32(ref_sigma_sqd, 6);
+    cmp_sigma_sqd = _mm256_slli_epi32(cmp_sigma_sqd, 6);
+    sigma_both = _mm256_slli_epi32(sigma_both, 6);
+
+    calc_window_ssim_int_8u_avx2();
+
+    int power_val;
+    uint16_t i16_map_denom;
+    int64_t ssim_val;
+    for (size_t w = 0; w < WIN_CHUNK; ++w) {
+      i16_map_denom = get_best_i16_from_u64((uint64_t)denom[w], &power_val);
+      num[w] = num[w] << 1;
+      ssim_val = (((num[w] >> power_val) * div_lookup_ptr[i16_map_denom]) +
+                  SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
+      ssim_sum += ssim_val;
+      int64_t const_1_minus_ssim_val = const_1 - ssim_val;
+      if(SSIM_POOLING_MINKOWSKI_P == 4) {
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val * const_1_minus_ssim_val;
+      } else {
+            /*SSIM_POOLING_MINKOWSKI_P == 3*/
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val;
+      }
+      ssim_mink_sum += mink_pow_ssim_val;
+    }
+  }
+  res->ssim_sum += ssim_sum;
+  res->ssim_mink_sum += ssim_mink_sum;
+  res->numWindows += i;
+  if (i < numWindows) {
+    SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
+    sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
+                             windowStride, bitDepthMinus8, div_lookup_ptr,
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+  }
+}
+
+void sum_windows_8x8_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
+  enum { WIN_CHUNK = 8, WIN_SIZE = 8 };
+  const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
+  const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
+  const uint8_t *pSrc = pBuf->p;
+  const ptrdiff_t srcStride = pBuf->stride;
+  int64_t num[WIN_CHUNK];
+  int64_t denom[WIN_CHUNK];
+  int32_t extraRtShiftBitsForSSIMVal =
+          (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int64_t mink_pow_ssim_val = 0;
+  float const_1 =
+        1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
+  size_t i = 0;
+  const __m256i quarterC1 = _mm256_set1_epi32(C1>>2);
+  const __m256i halfC2 = _mm256_set1_epi32(C2>>1);
+  const __m256i quarterC2 = _mm256_set1_epi32(C2>>2);
+  const __m256i fullLSB = _mm256_set1_epi32(LSB);
+  __m256i a, b, c, d, sigma_both_a;
+  for (; i + WIN_CHUNK <= numWindows; i += WIN_CHUNK) {
+    const uint8_t *pSrcNext = pSrc + 4 * srcStride;
+    __m256i sum;
+    __m256i ref_sigma_sqd;
+    __m256i cmp_sigma_sqd;
+    __m256i sigma_both;
+    __m256i _r0, _r1, _r2, _r3, _r4;
+    for (uint32_t x = 0; x <= 32; x+=32) {
+      sum = _r1;
+      ref_sigma_sqd = _r2;
+      cmp_sigma_sqd = _r3;
+      sigma_both = _r4;
+      _r0 = _mm256_load_si256((const __m256i *)(pSrc + x));
+      _r1 = _mm256_load_si256((const __m256i *)(pSrcNext + x));
+      _r1 = _mm256_add_epi32(_r0, _r1);
+      _r0 = _mm256_load_si256((const __m256i *)(pSrc + x + srcStride));
+      _r2 = _mm256_load_si256((const __m256i *)(pSrcNext + x + srcStride));
+      _r2 = _mm256_add_epi32(_r0, _r2);
+      _r0 = _mm256_load_si256((const __m256i *)(pSrc + x + 2*srcStride));
+      _r3 = _mm256_load_si256((const __m256i *)(pSrcNext + x + 2*srcStride));
+      _r3 = _mm256_add_epi32(_r0, _r3);
+      _r0 = _mm256_load_si256((const __m256i *)(pSrc + x + 3*srcStride));
+      _r4 = _mm256_load_si256((const __m256i *)(pSrcNext + x + 3*srcStride));
+      _r4 = _mm256_add_epi32(_r0, _r4);
+    }
+    sum = _mm256_hadd_epi32(sum, _r1);
+    ref_sigma_sqd = _mm256_hadd_epi32(ref_sigma_sqd, _r2);
+    cmp_sigma_sqd = _mm256_hadd_epi32(cmp_sigma_sqd, _r3);
+    sigma_both = _mm256_hadd_epi32(sigma_both, _r4);
+    pSrc += sizeof(uint32_t) * 16;
+    // CALC
+    ref_sigma_sqd = _mm256_slli_epi32(ref_sigma_sqd, 6);
+    cmp_sigma_sqd = _mm256_slli_epi32(cmp_sigma_sqd, 6);
+    sigma_both = _mm256_slli_epi32(sigma_both, 6);
+
+    calc_window_ssim_int_8u_avx2();
+
+    int power_val;
+    uint16_t i16_map_denom;
+    int64_t ssim_val;
+    for (size_t w = 0; w < WIN_CHUNK; ++w) {
+      i16_map_denom = get_best_i16_from_u64((uint64_t)denom[w], &power_val);
+      num[w] = num[w] << 1;
+      ssim_val = (((num[w] >> power_val) * div_lookup_ptr[i16_map_denom]) +
+                  SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
+      ssim_sum += ssim_val;
+      int64_t const_1_minus_ssim_val = const_1 - ssim_val;
+      if(SSIM_POOLING_MINKOWSKI_P == 4) {
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val * const_1_minus_ssim_val;
+      } else {
+            /*SSIM_POOLING_MINKOWSKI_P == 3*/
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val;
+      }
+      ssim_mink_sum += mink_pow_ssim_val;
+    }
+  }
+  res->ssim_sum += ssim_sum;
+  res->ssim_mink_sum += ssim_mink_sum;
+  res->numWindows += i;
+  if (i < numWindows) {
+    SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
+    sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
+                             windowStride, bitDepthMinus8, div_lookup_ptr,
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+  }
+}
+
+void sum_windows_16x4_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
+  enum { WIN_CHUNK = 8, WIN_SIZE = 16 };
+  const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
+  const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
+  const uint8_t *pSrc = pBuf->p;
+  const ptrdiff_t srcStride = pBuf->stride;
+  int64_t num[WIN_CHUNK];
+  int64_t denom[WIN_CHUNK];
+  int32_t extraRtShiftBitsForSSIMVal =
+          (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int64_t mink_pow_ssim_val = 0;
+  float const_1 =
+        1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
+  size_t i = 0;
+  const __m256i quarterC1 = _mm256_set1_epi32(C1>>2);
+  const __m256i halfC2 = _mm256_set1_epi32(C2>>1);
+  const __m256i quarterC2 = _mm256_set1_epi32(C2>>2);
+  const __m256i fullLSB = _mm256_set1_epi32(LSB);
+  __m256i a, b, c, d, sigma_both_a;
+  for (; i + WIN_CHUNK <= numWindows; i += WIN_CHUNK) {
+    __m256i sum = _mm256_setzero_si256();
+    __m256i ref_sigma_sqd = _mm256_setzero_si256();
+    __m256i cmp_sigma_sqd = _mm256_setzero_si256();
+    __m256i sigma_both = _mm256_setzero_si256();
+    __m256i _r0, _r1, _r2, _r3;
+    for (uint32_t x = 0; x < 16; x+=4){
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + x*srcStride));
+      _r2 = _mm256_loadu_si256((const __m256i *)(pSrc + 8 + x*srcStride));
+      _r1 = _mm256_loadu_si256((const __m256i *)(pSrc + 4 + x*srcStride));
+      _r3 = _mm256_loadu_si256((const __m256i *)(pSrc + 12 + x*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      sum = _mm256_add_epi32(sum, _r1);
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + (x+1)*srcStride));
+      _r2 = _mm256_loadu_si256((const __m256i *)(pSrc + 8 + (x+1)*srcStride));
+      _r1 = _mm256_loadu_si256((const __m256i *)(pSrc + 4 + (x+1)*srcStride));
+      _r3 = _mm256_loadu_si256((const __m256i *)(pSrc + 12 + (x+1)*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      ref_sigma_sqd = _mm256_add_epi32(ref_sigma_sqd, _r1);
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + (x+2)*srcStride));
+      _r2 = _mm256_loadu_si256((const __m256i *)(pSrc + 8 + (x+2)*srcStride));
+      _r1 = _mm256_loadu_si256((const __m256i *)(pSrc + 4 + (x+2)*srcStride));
+      _r3 = _mm256_loadu_si256((const __m256i *)(pSrc + 12 + (x+2)*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      cmp_sigma_sqd = _mm256_add_epi32(cmp_sigma_sqd, _r1);
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + (x+3)*srcStride));
+      _r2 = _mm256_loadu_si256((const __m256i *)(pSrc + 8 + (x+3)*srcStride));
+      _r1 = _mm256_loadu_si256((const __m256i *)(pSrc + 4 + (x+3)*srcStride));
+      _r3 = _mm256_loadu_si256((const __m256i *)(pSrc + 12 + (x+3)*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      sigma_both = _mm256_add_epi32(sigma_both, _r1);
+    }
+    pSrc += sizeof(uint32_t) * 8;
+    // CALC
+    ref_sigma_sqd = _mm256_slli_epi32(ref_sigma_sqd, 8);
+    cmp_sigma_sqd = _mm256_slli_epi32(cmp_sigma_sqd, 8);
+    sigma_both = _mm256_slli_epi32(sigma_both, 8);
+
+    calc_window_ssim_int_8u_avx2()
+
+    int power_val;
+    uint16_t i16_map_denom;
+    int64_t ssim_val;
+    for (size_t w = 0; w < WIN_CHUNK; ++w) {
+      i16_map_denom = get_best_i16_from_u64((uint64_t)denom[w], &power_val);
+      num[w] = num[w] << 1;
+      ssim_val = (((num[w] >> power_val) * div_lookup_ptr[i16_map_denom]) +
+                  SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
+      ssim_sum += ssim_val;
+      int64_t const_1_minus_ssim_val = const_1 - ssim_val;
+      if(SSIM_POOLING_MINKOWSKI_P == 4) {
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val * const_1_minus_ssim_val;
+      } else {
+            /*SSIM_POOLING_MINKOWSKI_P == 3*/
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val;
+      }
+      ssim_mink_sum += mink_pow_ssim_val;
+    }
+  }
+  res->ssim_sum += ssim_sum;
+  res->ssim_mink_sum += ssim_mink_sum;
+  res->numWindows += i;
+  if (i < numWindows) {
+    SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
+    sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
+                             windowStride, bitDepthMinus8, div_lookup_ptr,
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+  }
+}
+
+void sum_windows_16x8_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
+  enum { WIN_CHUNK = 8, WIN_SIZE = 16 };
+  const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
+  const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
+  const uint8_t *pSrc = pBuf->p;
+  const ptrdiff_t srcStride = pBuf->stride;
+  int64_t num[WIN_CHUNK];
+  int64_t denom[WIN_CHUNK];
+  int32_t extraRtShiftBitsForSSIMVal =
+          (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int64_t mink_pow_ssim_val = 0;
+  float const_1 =
+        1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
+  size_t i = 0;
+  const __m256i quarterC1 = _mm256_set1_epi32(C1>>2);
+  const __m256i halfC2 = _mm256_set1_epi32(C2>>1);
+  const __m256i quarterC2 = _mm256_set1_epi32(C2>>2);
+  const __m256i fullLSB = _mm256_set1_epi32(LSB);
+  __m256i a, b, c, d, sigma_both_a;
+  for (; i + WIN_CHUNK <= numWindows; i += WIN_CHUNK) {
+    __m256i sum = _mm256_setzero_si256();
+    __m256i ref_sigma_sqd = _mm256_setzero_si256();
+    __m256i cmp_sigma_sqd = _mm256_setzero_si256();
+    __m256i sigma_both = _mm256_setzero_si256();
+    __m256i _r0, _r1, _r2, _r3;
+    for (uint32_t x = 0; x < 16; x+=4){
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + x*srcStride));
+      _r1 = _mm256_loadu_si256((const __m256i *)(pSrc + 8 + x*srcStride));
+      _r2 = _mm256_loadu_si256((const __m256i *)(pSrc + 32 + x*srcStride));
+      _r3 = _mm256_loadu_si256((const __m256i *)(pSrc + 40 + x*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      sum = _mm256_add_epi32(sum, _r1);
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + (x+1)*srcStride));
+      _r1 = _mm256_loadu_si256((const __m256i *)(pSrc + 8 + (x+1)*srcStride));
+      _r2 = _mm256_loadu_si256((const __m256i *)(pSrc + 32 + (x+1)*srcStride));
+      _r3 = _mm256_loadu_si256((const __m256i *)(pSrc + 40 + (x+1)*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      ref_sigma_sqd = _mm256_add_epi32(ref_sigma_sqd, _r1);
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + (x+2)*srcStride));
+      _r1 = _mm256_loadu_si256((const __m256i *)(pSrc + 8 + (x+2)*srcStride));
+      _r2 = _mm256_loadu_si256((const __m256i *)(pSrc + 32 + (x+2)*srcStride));
+      _r3 = _mm256_loadu_si256((const __m256i *)(pSrc + 40 + (x+2)*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      cmp_sigma_sqd = _mm256_add_epi32(cmp_sigma_sqd, _r1);
+      _r0 = _mm256_loadu_si256((const __m256i *)(pSrc + (x+3)*srcStride));
+      _r1 = _mm256_loadu_si256((const __m256i *)(pSrc + 8 + (x+3)*srcStride));
+      _r2 = _mm256_loadu_si256((const __m256i *)(pSrc + 32 + (x+3)*srcStride));
+      _r3 = _mm256_loadu_si256((const __m256i *)(pSrc + 40 + (x+3)*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      sigma_both = _mm256_add_epi32(sigma_both, _r1);
+    }
+    pSrc += sizeof(uint32_t) * 16;
+    // CALC
+    ref_sigma_sqd = _mm256_slli_epi32(ref_sigma_sqd, 8);
+    cmp_sigma_sqd = _mm256_slli_epi32(cmp_sigma_sqd, 8);
+    sigma_both = _mm256_slli_epi32(sigma_both, 8);
+
+    calc_window_ssim_int_8u_avx2()
+
+    int power_val;
+    uint16_t i16_map_denom;
+    int64_t ssim_val;
+    for (size_t w = 0; w < WIN_CHUNK; ++w) {
+      i16_map_denom = get_best_i16_from_u64((uint64_t)denom[w], &power_val);
+      num[w] = num[w] << 1;
+      ssim_val = (((num[w] >> power_val) * div_lookup_ptr[i16_map_denom]) +
+                  SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
+      ssim_sum += ssim_val;
+      int64_t const_1_minus_ssim_val = const_1 - ssim_val;
+      if(SSIM_POOLING_MINKOWSKI_P == 4) {
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val * const_1_minus_ssim_val;
+      } else {
+            /*SSIM_POOLING_MINKOWSKI_P == 3*/
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val;
+      }
+      ssim_mink_sum += mink_pow_ssim_val;
+    }
+  }
+  res->ssim_sum += ssim_sum;
+  res->ssim_mink_sum += ssim_mink_sum;
+  res->numWindows += i;
+  if (i < numWindows) {
+    SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
+    sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
+                             windowStride, bitDepthMinus8, div_lookup_ptr,
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+  }
+}
+
+void sum_windows_16x16_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
+  enum { WIN_CHUNK = 8, WIN_SIZE = 16 };
+  const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
+  const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
+  const uint8_t *pSrc = pBuf->p;
+  const ptrdiff_t srcStride = pBuf->stride;
+  int64_t num[WIN_CHUNK];
+  int64_t denom[WIN_CHUNK];
+  int32_t extraRtShiftBitsForSSIMVal =
+          (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int64_t mink_pow_ssim_val = 0;
+  float const_1 =
+        1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
+  size_t i = 0;
+  const __m256i quarterC1 = _mm256_set1_epi32(C1>>2);
+  const __m256i halfC2 = _mm256_set1_epi32(C2>>1);
+  const __m256i quarterC2 = _mm256_set1_epi32(C2>>2);
+  const __m256i fullLSB = _mm256_set1_epi32(LSB);
+  __m256i a, b, c, d, sigma_both_a;
+  for (; i + WIN_CHUNK <= numWindows; i += WIN_CHUNK) {
+    __m256i sum = _mm256_setzero_si256();
+    __m256i ref_sigma_sqd = _mm256_setzero_si256();
+    __m256i cmp_sigma_sqd = _mm256_setzero_si256();
+    __m256i sigma_both = _mm256_setzero_si256();
+    __m256i _r0, _r1, _r2, _r3;
+    for (uint32_t x = 0; x < 16; x+=4){
+      _r0 = _mm256_load_si256((const __m256i *)(pSrc + x*srcStride));
+      _r1 = _mm256_load_si256((const __m256i *)(pSrc + 32 + x*srcStride));
+      _r2 = _mm256_load_si256((const __m256i *)(pSrc + 64 + x*srcStride));
+      _r3 = _mm256_load_si256((const __m256i *)(pSrc + 96 + x*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      sum = _mm256_add_epi32(sum, _r1);
+      _r0 = _mm256_load_si256((const __m256i *)(pSrc + (x+1)*srcStride));
+      _r1 = _mm256_load_si256((const __m256i *)(pSrc + 32 + (x+1)*srcStride));
+      _r2 = _mm256_load_si256((const __m256i *)(pSrc + 64 + (x+1)*srcStride));
+      _r3 = _mm256_load_si256((const __m256i *)(pSrc + 96 + (x+1)*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      ref_sigma_sqd = _mm256_add_epi32(ref_sigma_sqd, _r1);
+      _r0 = _mm256_load_si256((const __m256i *)(pSrc + (x+2)*srcStride));
+      _r1 = _mm256_load_si256((const __m256i *)(pSrc + 32 + (x+2)*srcStride));
+      _r2 = _mm256_load_si256((const __m256i *)(pSrc + 64 + (x+2)*srcStride));
+      _r3 = _mm256_load_si256((const __m256i *)(pSrc + 96 + (x+2)*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      cmp_sigma_sqd = _mm256_add_epi32(cmp_sigma_sqd, _r1);
+      _r0 = _mm256_load_si256((const __m256i *)(pSrc + (x+3)*srcStride));
+      _r1 = _mm256_load_si256((const __m256i *)(pSrc + 32 + (x+3)*srcStride));
+      _r2 = _mm256_load_si256((const __m256i *)(pSrc + 64 + (x+3)*srcStride));
+      _r3 = _mm256_load_si256((const __m256i *)(pSrc + 96 + (x+3)*srcStride));
+      _r1 = _mm256_hadd_epi32(_r0, _r1);
+      _r3 = _mm256_hadd_epi32(_r2, _r3);
+      _r1 = _mm256_hadd_epi32(_r1, _r3);
+      sigma_both = _mm256_add_epi32(sigma_both, _r1);
+    }
+    pSrc += sizeof(uint32_t) * 32;
+    // CALC
+    ref_sigma_sqd = _mm256_slli_epi32(ref_sigma_sqd, 8);
+    cmp_sigma_sqd = _mm256_slli_epi32(cmp_sigma_sqd, 8);
+    sigma_both = _mm256_slli_epi32(sigma_both, 8);
+
+    calc_window_ssim_int_8u_avx2()
+
+    int power_val;
+    uint16_t i16_map_denom;
+    int64_t ssim_val;
+    for (size_t w = 0; w < WIN_CHUNK; ++w) {
+      i16_map_denom = get_best_i16_from_u64((uint64_t)denom[w], &power_val);
+      num[w] = num[w] << 1;
+      ssim_val = (((num[w] >> power_val) * div_lookup_ptr[i16_map_denom]) +
+                  SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
+      ssim_sum += ssim_val;
+      int64_t const_1_minus_ssim_val = const_1 - ssim_val;
+      if(SSIM_POOLING_MINKOWSKI_P == 4) {
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val * const_1_minus_ssim_val;
+      } else {
+            /*SSIM_POOLING_MINKOWSKI_P == 3*/
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val;
+      }
+      ssim_mink_sum += mink_pow_ssim_val;
+    }
+  }
+  res->ssim_sum += ssim_sum;
+  res->ssim_mink_sum += ssim_mink_sum;
+  res->numWindows += i;
+  if (i < numWindows) {
+    SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
+    sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
+                             windowStride, bitDepthMinus8, div_lookup_ptr,
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+  }
+}
+#endif
+
 #endif /* defined(_X86) || defined(_X64) */

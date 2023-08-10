@@ -96,14 +96,14 @@ uint16_t get_best_i16_from_u64(uint64_t temp, int *power) {
     return (uint16_t) temp;
 } /*uint16_t get_best_i16_from_u64(uint64_t temp, int *power)*/
 
-int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_8BD_FORMAL_ARGS) {
+int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS) {
   const uint32_t windowSize_sqd = windowSize * windowSize;
 
-  const uint16_t ref_sum = pWnd->ref_sum;
-  const uint16_t cmp_sum = pWnd->cmp_sum;
-  uint32_t ref_sigma_sqd = pWnd->ref_sigma_sqd * windowSize_sqd;
-  uint32_t cmp_sigma_sqd = pWnd->cmp_sigma_sqd * windowSize_sqd;
-  uint32_t sigma_both = pWnd->sigma_both * windowSize_sqd;
+  const uint16_t ref_sum = (uint16_t)pWnd->ref_sum;
+  const uint16_t cmp_sum = (uint16_t)pWnd->cmp_sum;
+  uint32_t ref_sigma_sqd = (uint32_t)pWnd->ref_sigma_sqd * windowSize_sqd;
+  uint32_t cmp_sigma_sqd = (uint32_t)pWnd->cmp_sigma_sqd * windowSize_sqd;
+  uint32_t sigma_both = (uint32_t)pWnd->sigma_both * windowSize_sqd;
 
   /* STEP 2. adjust values */
 
@@ -413,11 +413,7 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   const ptrdiff_t srcStride = pBuf->stride;
 
   for (size_t i = 0; i < numWindows; ++i) {
-#if UPDATED_INTEGER_IMPLEMENTATION
-    WINDOW_STATS_8BD wnd = {0};
-#else
      WINDOW_STATS wnd = {0};
-#endif
     /* STEP 1. load data, no scaling */
 
     /* windows are summed up from 4x4 regions */
@@ -484,7 +480,13 @@ void sum_windows_12x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
 void sum_windows_8x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
 }
-void sum_windows_16_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
+void sum_windows_16x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_16x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_16x16_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
 }
 #endif
