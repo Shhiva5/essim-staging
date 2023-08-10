@@ -144,9 +144,11 @@ static eCPUType QueryCpuType() {
 
 static eCPUType QueryCpuType() { return cpu_neon; }
 
+#if ARM_BUILD_FIXES
 #else
 
 static eCPUType QueryCpuType() { return cpu_neon; }
+#endif
 
 #endif /* defined(__ANDROID__) */
 

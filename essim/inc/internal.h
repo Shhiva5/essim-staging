@@ -28,7 +28,7 @@ enum { LOG2_ALIGN = 6, ALIGN = 1 << LOG2_ALIGN };
 
 #define INTR_PROFILING_PRINTS 0
 #define ENABLE_ONLY_C_PATH 0
-#define ARM64_SIMD_FIX 1
+#define ARM_BUILD_FIXES 1
 #define NEW_SIMD_FUNC 1
 
 #define ENABLE_MINK_3 0 //Default mink_4 is choosen
@@ -59,9 +59,6 @@ Based on above cases, we consider SSIM_ACCUMULATED_SUM maximum value can be
 #define MAX_SSIM_ACCUMULATED_SUM_VALUE (((uint64_t)1 << 63))
 #endif
 
-#define ADDITIONAL_RT_SHIFT_MINK_4 5
-#define ADDITIONAL_RT_SHIFT_MINK_3 2
-
 #define div_Q_factor 1073741824  //2^30
 
 #if NEW_SIMD_FUNC
@@ -74,7 +71,6 @@ Based on above cases, we consider SSIM_ACCUMULATED_SUM maximum value can be
   With above parameters we get maximum total No. of windows per frame,
   when we convert that number into bits, we get 19 bits.
 */
-#define BITS_REQ_FOR_MAX_TOTAL_NUM_OF_WINDOWS 19
 
 #pragma pack(push, 1)
 

@@ -28,11 +28,11 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
     uint32x4_t sigma_both = vdupq_n_u32(0);
 
     for (uint32_t y = 0; y < WIN_SIZE; ++y) {
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       uint8x16_t r0, r1;
       uint16x8_t r2, r3, r4, r5, r6, r7;
       uint32x4_t r8, r9;
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       uint8x16_t r0, r1, r2, r3, r4, r5;
 #endif
 
@@ -42,13 +42,13 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       /* sum ref_sum & cmp_sum */
       r4 = vpaddlq_u8(r0);
       r5 = vpaddlq_u8(r1);
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       r8 = vpaddlq_u16(r4);
       r9 = vpaddlq_u16(r5);
       r9 = vshlq_n_u32(r9, 16);
       sum = vaddq_u16(sum, vreinterpretq_u16_u32(r8));
       sum = vaddq_u16(sum, vreinterpretq_u16_u32(r9));
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       r4 = vpaddlq_u16(r4);
       r5 = vpaddlq_u16(r5);
       r5 = vshlq_n_u32(r5, 16);
@@ -69,7 +69,7 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       s2 = vget_low_u8(r1);
       s3 = vget_high_u8(r1);
 
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       r2 = vmull_u8(s0, s0);
       r3 = vmull_u8(s1, s0);
       r4 = vmull_u8(s1, s1);
@@ -82,7 +82,7 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       ref_sigma_sqd = vpadalq_u16(ref_sigma_sqd, r5);
       sigma_both = vpadalq_u16(sigma_both, r6);
       cmp_sigma_sqd = vpadalq_u16(cmp_sigma_sqd, r7);
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       r0 = vmull_u8(s0, s0);
       r4 = vmull_u8(s1, s0);
       r1 = vmull_u8(s1, s1);
@@ -101,12 +101,12 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       src.cmp = AdvancePointer(src.cmp, src.cmpStride);
     }
 
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
     vst1q_u8(pDst + 0 * dstStride, vreinterpretq_u8_u16(sum));
     vst1q_u8(pDst + 1 * dstStride, vreinterpretq_u8_u32(ref_sigma_sqd));
     vst1q_u8(pDst + 2 * dstStride, vreinterpretq_u8_u32(cmp_sigma_sqd));
     vst1q_u8(pDst + 3 * dstStride, vreinterpretq_u8_u32(sigma_both));
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
     vst1q_u8(pDst + 0 * dstStride, sum);
     vst1q_u8(pDst + 1 * dstStride, ref_sigma_sqd);
     vst1q_u8(pDst + 2 * dstStride, cmp_sigma_sqd);
@@ -128,11 +128,11 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
     uint32x2_t sigma_both = vdup_n_u32(0);
 
     for (uint32_t y = 0; y < WIN_SIZE; ++y) {
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       uint32x2_t r0, r1, r2, r3;
       uint16x4_t r4, r5;
       uint8x8_t r8, r9;
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       uint8x8_t r0, r1, r2, r3, r4, r5;
 #endif
 
@@ -140,7 +140,7 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       r1 = vld1_dup_u32(src.cmp);
 
       /* sum ref_sum & cmp_sum */
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       r4 = vpaddl_u8(vreinterpret_u8_u32(r0));
       r5 = vpaddl_u8(vreinterpret_u8_u32(r1));
       r2 = vpaddl_u16(r4);
@@ -155,7 +155,7 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
 
       r8 = t0.val[0];
       r9 = t0.val[1];
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       r4 = vpaddl_u8(r0);
       r5 = vpaddl_u8(r1);
       r4 = vpaddl_u16(r4);
@@ -173,7 +173,7 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
 
       uint8x8_t s0, s1, s2, s3;
 
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       s0 = r8;
       s1 = vreinterpret_u8_u32(vrev64_u32(vreinterpret_u32_u8(r8)));
       s2 = r9;
@@ -191,7 +191,7 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       r5 = vget_low_u16(vmull_u8(s3, s3));
       sigma_both = vpadal_u16(sigma_both, r4);
       cmp_sigma_sqd = vpadal_u16(cmp_sigma_sqd, r5);
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       s0 = r0;
       s1 = vrev64_u32(r0);
       s2 = r1;
@@ -215,13 +215,13 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       src.cmp = AdvancePointer(src.cmp, src.cmpStride);
     }
 
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
     vst1_lane_u32((uint32_t *)(pDst + 0 * dstStride),
                               vreinterpret_u32_u16(sum), 0);
     vst1_lane_u32((uint32_t *)(pDst + 1 * dstStride), ref_sigma_sqd, 0);
     vst1_lane_u32((uint32_t *)(pDst + 2 * dstStride), cmp_sigma_sqd, 0);
     vst1_lane_u32((uint32_t *)(pDst + 3 * dstStride), sigma_both, 0);
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
     vst1_lane_u32(pDst + 0 * dstStride, sum, 0);
     vst1_lane_u32(pDst + 1 * dstStride, ref_sigma_sqd, 0);
     vst1_lane_u32(pDst + 2 * dstStride, cmp_sigma_sqd, 0);
@@ -252,11 +252,11 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
     uint64x2_t sigma_both = vdupq_n_u64(0);
 
     for (uint32_t y = 0; y < WIN_SIZE; ++y) {
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       uint16x8_t r0, r1;
       uint32x4_t r2, r3, r4, r5, r6, r7;
       uint64x2_t r8, r9;
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       uint16x8_t r0, r1, r2, r3, r4, r5;
 #endif
 
@@ -266,13 +266,13 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       /* sum ref_sum & cmp_sum */
       r4 = vpaddlq_u16(r0);
       r5 = vpaddlq_u16(r1);
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       r8 = vpaddlq_u32(r4);
       r9 = vpaddlq_u32(r5);
       r9 = vshlq_n_u64(r9, 32);
       sum = vaddq_u32(sum, vreinterpretq_u32_u64(r8));
       sum = vaddq_u32(sum, vreinterpretq_u32_u64(r9));
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       r4 = vpaddlq_u32(r4);
       r5 = vpaddlq_u32(r5);
       r5 = vshlq_n_u64(r5, 32);
@@ -293,7 +293,7 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       s2 = vget_low_u16(r1);
       s3 = vget_high_u16(r1);
 
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       r2 = vmull_u16(s0, s0);
       r3 = vmull_u16(s1, s0);
       r4 = vmull_u16(s1, s1);
@@ -306,7 +306,7 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       ref_sigma_sqd = vpadalq_u32(ref_sigma_sqd, r5);
       sigma_both = vpadalq_u32(sigma_both, r6);
       cmp_sigma_sqd = vpadalq_u32(cmp_sigma_sqd, r7);
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       r0 = vmull_u16(s0, s0);
       r4 = vmull_u16(s1, s0);
       r1 = vmull_u16(s1, s1);
@@ -325,7 +325,7 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       src.cmp = AdvancePointer(src.cmp, src.cmpStride);
     }
 
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
     vst1q_u16((uint16_t *)(pDst + 0 * dstStride),
                           vreinterpretq_u16_u32(sum));
     vst1q_u16((uint16_t *)(pDst + 1 * dstStride),
@@ -334,7 +334,7 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
                           vreinterpretq_u16_u64(cmp_sigma_sqd));
     vst1q_u16((uint16_t *)(pDst + 3 * dstStride),
                           vreinterpretq_u16_u64(sigma_both));
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
     vst1q_u16((uint16_t *)(pDst + 0 * dstStride), sum);
     vst1q_u16((uint16_t *)(pDst + 1 * dstStride), ref_sigma_sqd);
     vst1q_u16((uint16_t *)(pDst + 2 * dstStride), cmp_sigma_sqd);
@@ -356,11 +356,11 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
     uint64x1_t sigma_both = vdup_n_u64(0);
 
     for (uint32_t y = 0; y < WIN_SIZE; ++y) {
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       uint64x1_t r2, r3;
       uint32x2_t r4, r5;
       uint16x4_t r0, r1;
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       uint16x4_t r0, r1, r2, r3, r4, r5;
 #endif
 
@@ -368,7 +368,7 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       r1 = vld1_u16(src.cmp);
 
       /* sum ref_sum & cmp_sum */
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       r4 = vpaddl_u16(r0);
       r5 = vpaddl_u16(r1);
       r2 = vpaddl_u32(r4);
@@ -376,7 +376,7 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       r3 = vshl_n_u64(r3, 32);
       sum = vadd_u32(sum, vreinterpret_u32_u64(r2));
       sum = vadd_u32(sum, vreinterpret_u32_u64(r3));
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       r4 = vpaddl_u16(r0);
       r5 = vpaddl_u16(r1);
       r4 = vpaddl_u32(r4);
@@ -394,7 +394,7 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
 
       uint16x4_t s0, s1, s2, s3;
 
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
       s0 = r0;
       s1 = vreinterpret_u16_u32(vrev64_u32(vreinterpret_u32_u16(r0)));
       s2 = r1;
@@ -412,7 +412,7 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       r5 = vget_low_u32(vmull_u16(s3, s3));
       sigma_both = vpadal_u32(sigma_both, r4);
       cmp_sigma_sqd = vpadal_u32(cmp_sigma_sqd, r5);
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
       s0 = r0;
       s1 = vrev64_u32(r0);
       s2 = r1;
@@ -435,9 +435,9 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       src.ref = AdvancePointer(src.ref, src.refStride);
       src.cmp = AdvancePointer(src.cmp, src.cmpStride);
     }
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
     vst1_u64((uint64_t *)(pDst + 0 * dstStride), vreinterpret_u64_u32(sum));
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
     vst1_u64((uint64_t *)(pDst + 0 * dstStride), sum);
 #endif
     vst1_u64((uint64_t *)(pDst + 1 * dstStride), ref_sigma_sqd);
@@ -508,7 +508,7 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
     value = vmulq_u32(_r0, windowSize_sqd);                                    \
   }
 
-#if ARM64_SIMD_FIX
+#if ARM_BUILD_FIXES
 #define ASM_CALC_4_QDWORD_SSIM_NEON(num, denom)                                \
   {                                                                            \
     uint32x4_t a, c, d;                                                        \
@@ -553,7 +553,7 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       vst1q_s64(denom + 2, _r);                                                \
     }                                                                          \
   }
-#elif !ARM64_SIMD_FIX
+#elif !ARM_BUILD_FIXES
 #define ASM_CALC_4_QDWORD_SSIM_NEON(num, denom)                                \
   {                                                                            \
     uint32x4_t a, c, d;                                                        \
