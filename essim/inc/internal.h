@@ -31,14 +31,6 @@ enum { LOG2_ALIGN = 6, ALIGN = 1 << LOG2_ALIGN };
 #define ARM_BUILD_FIXES 1
 #define NEW_SIMD_FUNC 1
 
-#define ENABLE_MINK_3 0 //Default mink_4 is choosen
-
-#if ENABLE_MINK_3
-#define SSIM_POOLING_MINKOWSKI_P 3
-#else
-#define SSIM_POOLING_MINKOWSKI_P 4
-#endif
-
 
 /*Max WxH eSSSIM can support*/
 #define MAX_FRAME_WIDTH 7680
@@ -53,11 +45,6 @@ then ssim_accumulated_sum can be -ve, so we need one bit for sign representation
 Based on above cases, we consider SSIM_ACCUMULATED_SUM maximum value can be
 (2^64)-1 (for mink 4) or 2^63 (for mink 3).
 */
-#if SSIM_POOLING_MINKOWSKI_P == 4
-#define MAX_SSIM_ACCUMULATED_SUM_VALUE (uint64_t)18446744073709551615 /*(2^64) -1*/
-#else /*SSIM_POOLING_MINKOWSKI_P == 3*/
-#define MAX_SSIM_ACCUMULATED_SUM_VALUE (((uint64_t)1 << 63))
-#endif
 
 #define div_Q_factor 1073741824  //2^30
 
@@ -140,9 +127,9 @@ typedef struct SSIM_SRC {
 #if UPDATED_INTEGER_IMPLEMENTATION
 #define CALC_WINDOW_SSIM_FORMAL_ARGS                                      \
   WINDOW_STATS *const pWnd, const uint32_t windowSize, const uint32_t C1, \
-      const uint32_t C2, uint32_t rightShiftBits, uint32_t* div_lookup_ptr, \
+      const uint32_t C2, uint32_t* div_lookup_ptr, \
       uint32_t SSIMValRtShiftBits, uint32_t SSIMValRtShiftHalfRound
-#define CALC_WINDOW_SSIM_ACTUAL_ARGS pWnd, windowSize, C1, C2, rightShiftBits,\
+#define CALC_WINDOW_SSIM_ACTUAL_ARGS pWnd, windowSize, C1, C2,\
   div_lookup_ptr, SSIMValRtShiftBits SSIMValRtShiftHalfRound
 #elif !UPDATED_INTEGER_IMPLEMENTATION
 #define CALC_WINDOW_SSIM_FORMAL_ARGS                                      \
@@ -169,10 +156,10 @@ typedef int64_t (*calc_window_ssim_proc_t)(CALC_WINDOW_SSIM_FORMAL_ARGS);
       const size_t numWindows, const uint32_t windowSize,  \
       const uint32_t windowStride, const uint32_t bitDepthMinus8, \
       uint32_t *div_lookup_ptr, uint32_t SSIMValRtShiftBits, \
-      uint32_t SSIMValRtShiftHalfRound
+      uint32_t SSIMValRtShiftHalfRound, const uint32_t SSIM_POOLING_MINKOWSKI_P
 #define SUM_WINDOWS_ACTUAL_ARGS \
   res, pBuf, numWindows, windowSize, windowStride, bitDepthMinus8, \
-  div_lookup_ptr, SSIMValRtShiftBits, SSIMValRtShiftHalfRound
+  div_lookup_ptr, SSIMValRtShiftBits, SSIMValRtShiftHalfRound, SSIM_POOLING_MINKOWSKI_P
 #elif !UPDATED_INTEGER_IMPLEMENTATION
 #define SUM_WINDOWS_FORMAL_ARGS                            \
   SSIM_RES *const res, SSIM_4X4_WINDOW_BUFFER *const pBuf, \
@@ -297,7 +284,25 @@ float calc_window_ssim_float(
     const uint32_t windowSize,
     const float C1,
     const float C2);
+#if UPDATED_INTEGER_IMPLEMENTATION
+eSSIMResult ssim_compute_prec(
+    SSIM_CTX* const ctx,
+    const void* ref,
+    const ptrdiff_t refStride,
+    const void* cmp,
+    const ptrdiff_t cmpStride,
+    const uint32_t SSIM_POOLING_MINKOWSKI_P);
 
+eSSIMResult ssim_compute_perf(
+    SSIM_CTX* const ctx,
+    const void* ref,
+    const ptrdiff_t refStride,
+    const void* cmp,
+    const ptrdiff_t cmpStride,
+    const uint32_t roiY,
+    const uint32_t roiHeight,
+    const uint32_t SSIM_POOLING_MINKOWSKI_P);
+#else
 eSSIMResult ssim_compute_prec(
     SSIM_CTX* const ctx,
     const void* ref,
@@ -314,6 +319,7 @@ eSSIMResult ssim_compute_perf(
     const uint32_t roiY,
     const uint32_t roiHeight);
 
+#endif
 /*
     declare optimized functions callers
 */

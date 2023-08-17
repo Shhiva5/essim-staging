@@ -151,7 +151,7 @@ void sum_windows_8x4_int_8u_sse41(SUM_WINDOWS_FORMAL_ARGS) {
     sum_windows_8x4_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8,
                              div_lookup_ptr, SSIMValRtShiftBits,
-                             SSIMValRtShiftHalfRound);
+                             SSIMValRtShiftHalfRound, SSIM_POOLING_MINKOWSKI_P);
 #elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8);
@@ -274,7 +274,8 @@ void sum_windows_12x4_int_8u_sse41(SUM_WINDOWS_FORMAL_ARGS) {
 #if UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8,div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
+                             SSIM_POOLING_MINKOWSKI_P);
 #elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8);

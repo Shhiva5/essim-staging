@@ -9,10 +9,19 @@
 #include <essim/essim.h>
 #include <essim/inc/internal.h>
 
+#if UPDATED_INTEGER_IMPLEMENTATION
 eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
                               const ptrdiff_t refStride, const void *cmp,
                               const ptrdiff_t cmpStride, const uint32_t roiY,
-                              const uint32_t roiHeight) {
+                              const uint32_t roiHeight,
+                              const uint32_t SSIM_POOLING_MINKOWSKI_P)
+#else
+eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
+                              const ptrdiff_t refStride, const void *cmp,
+                              const ptrdiff_t cmpStride, const uint32_t roiY,
+                              const uint32_t roiHeight)
+#endif
+{
   const load_4x4_windows_proc_t load_4x4_windows_proc =
       ctx->params->load_4x4_windows_proc;
   const sum_windows_proc_t sum_windows_proc = ctx->params->sum_windows_proc;
@@ -65,7 +74,7 @@ eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
     sum_windows_proc(&ctx->res, &ctx->windowRows[0].ptrs, numWindows,
                      windowSize, windowStride, ctx->params->bitDepthMinus8,
                      ctx->div_lookup_ptr, ctx->SSIMValRtShiftBits,
-                     ctx->SSIMValRtShiftHalfRound);
+                     ctx->SSIMValRtShiftHalfRound, SSIM_POOLING_MINKOWSKI_P);
 #elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_proc(&ctx->res, &ctx->windowRows[0].ptrs, numWindows,
                      windowSize, windowStride, ctx->params->bitDepthMinus8);

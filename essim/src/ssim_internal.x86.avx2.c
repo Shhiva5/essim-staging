@@ -308,7 +308,8 @@ void sum_windows_8x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
 #if UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_float_8u_ssse3(res, &buf, numWindows - i, windowSize,
-                                   windowStride, bitDepthMinus8,NULL,0,0);
+                                   windowStride, bitDepthMinus8,NULL,0,0,
+                                   SSIM_POOLING_MINKOWSKI_P);
 #elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_float_8u_ssse3(res, &buf, numWindows - i, windowSize,
                                    windowStride, bitDepthMinus8);
@@ -436,7 +437,8 @@ void sum_windows_12x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
 #if UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_12x4_float_8u_ssse3(res, &buf, numWindows - i, windowSize,
-                                    windowStride, bitDepthMinus8, NULL, 0, 0);
+                                    windowStride, bitDepthMinus8, NULL, 0, 0,
+                                    SSIM_POOLING_MINKOWSKI_P);
 #elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_12x4_float_8u_ssse3(res, &buf, numWindows - i, windowSize,
                                     windowStride, bitDepthMinus8);
@@ -565,7 +567,8 @@ void sum_windows_8x4_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
+                             SSIM_POOLING_MINKOWSKI_P);
   }
 }
 
@@ -654,7 +657,8 @@ void sum_windows_8x8_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
+                             SSIM_POOLING_MINKOWSKI_P);
   }
 }
 
@@ -754,7 +758,8 @@ void sum_windows_16x4_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
+                             SSIM_POOLING_MINKOWSKI_P);
   }
 }
 
@@ -854,7 +859,8 @@ void sum_windows_16x8_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
+                             SSIM_POOLING_MINKOWSKI_P);
   }
 }
 
@@ -954,7 +960,8 @@ void sum_windows_16x16_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
+                             SSIM_POOLING_MINKOWSKI_P);
   }
 }
 #endif

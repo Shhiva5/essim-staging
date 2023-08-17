@@ -649,7 +649,8 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
 #if UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8,div_lookup_ptr,
-                             SSIMValRtShiftBits,SSIMValRtShiftHalfRound);
+                             SSIMValRtShiftBits,SSIMValRtShiftHalfRound,
+                             SSIM_POOLING_MINKOWSKI_P);
 #elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8);
@@ -766,7 +767,8 @@ void sum_windows_8x4_float_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
 #if UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_float_8u_c(res, &buf, numWindows - i, windowSize,
-                               windowStride, bitDepthMinus8,NULL,0,0);
+                               windowStride, bitDepthMinus8,NULL,0,0,
+                               SSIM_POOLING_MINKOWSKI_P);
 #elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_float_8u_c(res, &buf, numWindows - i, windowSize,
                                windowStride, bitDepthMinus8);
@@ -924,7 +926,8 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
+                             SSIM_POOLING_MINKOWSKI_P);
   }
 } /* void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) */
 
@@ -1014,7 +1017,8 @@ void sum_windows_8x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
+                             SSIM_POOLING_MINKOWSKI_P);
   }
 }
 
@@ -1056,34 +1060,50 @@ void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     uint32x4_t sigma_both = vdupq_n_u32(0);
     uint32x4_t _r0, _r1, _r2, _r3;
     for (uint32_t x = 0; x < 16; x+=4){
-      _r0 = vld1q_u32((const uint32_t *)(pSrc + x*srcStride));
-      _r1 = vld1q_u32((const uint32_t *)(pSrc + windowStride + x*srcStride));
-      _r2 = vld1q_u32((const uint32_t *)(pSrc + 2*windowStride + x*srcStride));
-      _r3 = vld1q_u32((const uint32_t *)(pSrc + 3*windowStride + x*srcStride));
+      _r0 = vld1q_u32(
+                (const uint32_t *)(pSrc + x*srcStride));
+      _r1 = vld1q_u32(
+                (const uint32_t *)(pSrc + windowStride + x*srcStride));
+      _r2 = vld1q_u32(
+                (const uint32_t *)(pSrc + 2*windowStride + x*srcStride));
+      _r3 = vld1q_u32(
+                (const uint32_t *)(pSrc + 3*windowStride + x*srcStride));
       _r1 = vpaddq_u32(_r0, _r1);
       _r3 = vpaddq_u32(_r2, _r3);
       _r1 = vpaddq_u32(_r1, _r3);
       sum = vaddq_u32(sum, _r1);
-      _r0 = vld1q_u32((const uint32_t *)(pSrc + (x+1)*srcStride));
-      _r1 = vld1q_u32((const uint32_t *)(pSrc + windowStride + (x+1)*srcStride));
-      _r2 = vld1q_u32((const uint32_t *)(pSrc + 2*windowStride + (x+1)*srcStride));
-      _r3 = vld1q_u32((const uint32_t *)(pSrc + 3*windowStride + (x+1)*srcStride));
+      _r0 = vld1q_u32(
+                (const uint32_t *)(pSrc + (x+1)*srcStride));
+      _r1 = vld1q_u32(
+                (const uint32_t *)(pSrc + windowStride + (x+1)*srcStride));
+      _r2 = vld1q_u32(
+                (const uint32_t *)(pSrc + 2*windowStride + (x+1)*srcStride));
+      _r3 = vld1q_u32(
+                (const uint32_t *)(pSrc + 3*windowStride + (x+1)*srcStride));
       _r1 = vpaddq_u32(_r0, _r1);
       _r3 = vpaddq_u32(_r2, _r3);
       _r1 = vpaddq_u32(_r1, _r3);
       ref_sigma_sqd = vaddq_u32(ref_sigma_sqd, _r1);
-      _r0 = vld1q_u32((const uint32_t *)(pSrc + (x+2)*srcStride));
-      _r1 = vld1q_u32((const uint32_t *)(pSrc + windowStride + (x+2)*srcStride));
-      _r2 = vld1q_u32((const uint32_t *)(pSrc + 2*windowStride + (x+2)*srcStride));
-      _r3 = vld1q_u32((const uint32_t *)(pSrc + 3*windowStride + (x+2)*srcStride));
+      _r0 = vld1q_u32(
+                (const uint32_t *)(pSrc + (x+2)*srcStride));
+      _r1 = vld1q_u32(
+                (const uint32_t *)(pSrc + windowStride + (x+2)*srcStride));
+      _r2 = vld1q_u32(
+                (const uint32_t *)(pSrc + 2*windowStride + (x+2)*srcStride));
+      _r3 = vld1q_u32(
+                (const uint32_t *)(pSrc + 3*windowStride + (x+2)*srcStride));
       _r1 = vpaddq_u32(_r0, _r1);
       _r3 = vpaddq_u32(_r2, _r3);
       _r1 = vpaddq_u32(_r1, _r3);
       cmp_sigma_sqd = vaddq_u32(cmp_sigma_sqd, _r1);
-      _r0 = vld1q_u32((const uint32_t *)(pSrc + (x+3)*srcStride));
-      _r1 = vld1q_u32((const uint32_t *)(pSrc + windowStride + (x+3)*srcStride));
-      _r2 = vld1q_u32((const uint32_t *)(pSrc + 2*windowStride + (x+3)*srcStride));
-      _r3 = vld1q_u32((const uint32_t *)(pSrc + 3*windowStride + (x+3)*srcStride));
+      _r0 = vld1q_u32(
+                (const uint32_t *)(pSrc + (x+3)*srcStride));
+      _r1 = vld1q_u32(
+                (const uint32_t *)(pSrc + windowStride + (x+3)*srcStride));
+      _r2 = vld1q_u32(
+                (const uint32_t *)(pSrc + 2*windowStride + (x+3)*srcStride));
+      _r3 = vld1q_u32(
+                (const uint32_t *)(pSrc + 3*windowStride + (x+3)*srcStride));
       _r1 = vpaddq_u32(_r0, _r1);
       _r3 = vpaddq_u32(_r2, _r3);
       _r1 = vpaddq_u32(_r1, _r3);
@@ -1125,7 +1145,8 @@ void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
+							 SSIM_POOLING_MINKOWSKI_P);
   }
 }
 

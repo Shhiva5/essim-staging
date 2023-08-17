@@ -142,7 +142,6 @@ int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS) {
 } /* int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS) */
 
 int64_t calc_window_ssim_int_10bd(CALC_WINDOW_SSIM_FORMAL_ARGS) {
-  UNUSED(rightShiftBits);
   const uint32_t windowSize_sqd = windowSize * windowSize;
 
   const uint32_t ref_sum = pWnd->ref_sum;
@@ -402,7 +401,6 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   int64_t ssim_mink_sum = 0, ssim_sum = 0;
 
 #if UPDATED_INTEGER_IMPLEMENTATION
-  uint32_t rightShiftBits = bitDepthMinus8 *2;
   int32_t extraRtShiftBitsForSSIMVal =
           (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
   int64_t mink_pow_ssim_val = 0;
@@ -433,7 +431,7 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
     pSrc = AdvancePointer(pSrc + windowStride, -srcStride * windowSize);
 
 #if UPDATED_INTEGER_IMPLEMENTATION
-    const int64_t ssim_val = calc_window_ssim_int_8u(&wnd, windowSize, C1, C2, rightShiftBits,
+    const int64_t ssim_val = calc_window_ssim_int_8u(&wnd, windowSize, C1, C2,
                                                     div_lookup_ptr, SSIMValRtShiftBits,
                                                     SSIMValRtShiftHalfRound);
     ssim_sum += ssim_val;
@@ -503,7 +501,6 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
           (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
   int64_t mink_pow_ssim_val = 0;
   int64_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
-  uint32_t rightShiftBits = (bitDepthMinus8 *2);
 #endif
   int64_t ssim_mink_sum = 0, ssim_sum = 0;
 
@@ -533,8 +530,8 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
     pSrc = AdvancePointer(pSrc, windowStep - srcStride * windowSize);
 #if UPDATED_INTEGER_IMPLEMENTATION
     const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2,
-                             rightShiftBits, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound);
+                             div_lookup_ptr, SSIMValRtShiftBits,
+                             SSIMValRtShiftHalfRound);
     ssim_sum += ssim_val;
 
  #if DEBUG_PRINTS

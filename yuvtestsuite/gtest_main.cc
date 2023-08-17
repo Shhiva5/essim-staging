@@ -76,13 +76,14 @@ void print_help() {
   printf(" -wsize : Window size for eSSIM (can be 8 or 16).Default is 16. \n");
   printf(" -wstride : Window stride for eSSIM (can be 4, 8, 16). \
             Default, consider Window size as window stride. wstride <= wsize \n");
+  printf(" -mink : SSIM Minkowski pooling (can be 3 or 4).Default is 4. \n");
   /*Currently not supporting essimmode as user argument,
-  because at frame level we need both INT and Float eSSIM values. */          
-  /*printf(" -mode : Can be 0 -> SSIM_MODE_REF, 1 -> SSIM_MODE_PERF_INT, 
+  because at frame level we need both INT and Float eSSIM values. */
+  /*printf(" -mode : Can be 0 -> SSIM_MODE_REF, 1 -> SSIM_MODE_PERF_INT,
   2 -> SSIM_MODE_PERF_FLOAT. Default is 1 \n"); */
   printf("\n Example cmd : \t");
   printf(" -r /mnt/d/InpYuvPath/xyz.yuv -d /mnt/d/ReconYuvPath/abc.yuv \
-        -w 1280 -h 720 -bd 10 -wsize 16 -wstride 8 \n");
+  -w 1280 -h 720 -bd 10 -wsize 16 -wstride 8 -mink 3\n");
   printf("\n");
 }
 uint32_t GetTotalWindowsInFrame(uint32_t FrWd, uint32_t FrHt,
@@ -95,7 +96,8 @@ uint32_t GetTotalWindowsInFrame(uint32_t FrWd, uint32_t FrHt,
 int main(int argc, char **argv) {
   uint32_t i = 1;
   std::string InpYuvPath = "NULL", ReconYuvPath = "NULL";
-  uint32_t Width = 0, Height = 0, WSize = 8, WStride = 8, Mode = 1, BitDepth = 8;
+  uint32_t Width = 0, Height = 0, WSize = 8, WStride = 8;
+  uint32_t Mode = 1, BitDepth = 8, SSIM_POOLING_MINKOWSKI_P = 4;
   eSSIMMode ModeEnum;
 
   /*Read cmd line args*/
@@ -140,13 +142,17 @@ int main(int argc, char **argv) {
       else if (strcmp(argv[i],"-bd")==0) {
         BitDepth = atoi(argv[++i]);
         std::cout << "BitDepth :" << BitDepth << std::endl;
-      }      
+      }
+      else if (strcmp(argv[i],"-mink")==0) {
+        SSIM_POOLING_MINKOWSKI_P = atoi(argv[++i]);
+        std::cout << "SSIM Minkowski Pooling :" << SSIM_POOLING_MINKOWSKI_P << std::endl;
+      }
       else {
         std::cout << "Unknow argument :" << argv[i] << std::endl;
         return 0;
       }
       i++;
-    } 
+    }
     if((WSize !=8) && (WSize !=16)) {
       WSize = 16;
       std::cout << "Considering default WSize i.e 16" << std::endl;
@@ -155,7 +161,7 @@ int main(int argc, char **argv) {
       WStride = WSize;
       std::cout << "Considering default WStride as WSize" << std::endl;
     }
-  
+
   }
 
   if(Mode == 0)
@@ -178,7 +184,7 @@ int main(int argc, char **argv) {
   ReconYuvfp.open(ReconYuvPath, std::ios::in | std::ios::binary);
 
   if(!InpYuvfp) {
-    std::cout << "Input Yuv file is empty (or)" << 
+    std::cout << "Input Yuv file is empty (or)" <<
               "doesn't found in the specified path" << std::endl;
     InpYuvfp.close();
     return 0;
@@ -218,7 +224,7 @@ int main(int argc, char **argv) {
                << "IntSSIMscore, FloatSSIMscore, ABSIntFloatSSIMscore,"
                << "IntESSIMscore, FloatESSIMscore, ABSIntFloatESSIMscore,"
                << "InpYuv, ReconYuv" << std::endl;
-  
+
   /*Calculating total num of frames and Frame, Y-Plane & UV-Plnae sizes*/
   InpYuvfp.seekg(0, std::ios::end);
   uint64_t InpYuvFileSize = InpYuvfp.tellg();
@@ -248,7 +254,7 @@ int main(int argc, char **argv) {
   YPlaneSize = DataTypeSize * Width * Height;
   UVPlaneSize = FrSize - YPlaneSize;
 
-#if DEBUG_PRINTS  
+#if DEBUG_PRINTS
   printf("\n Fr Width : %d, Fr Height : %d", Width, Height);
   printf("\n Wind Size : %d, Wind Stride : %d", WSize, WStride);
 #endif
@@ -298,8 +304,8 @@ int main(int argc, char **argv) {
       ssim_compute_8u(&FrSSIMScore_Int, &FrESSIMScore_Int, InpYuvBuff, stride,
                                       ReconYuvBuff, stride, Width, Height, WSize,
                                       WStride, 1, SSIM_MODE_PERF_INT,
-                                      SSIM_SPATIAL_POOLING_BOTH);
-#if PROFILING_PRINTS   
+                                      SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+#if PROFILING_PRINTS
         end = clock();
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
         printf("\t cpu_time_used_Int: %lf microsecs\n",cpu_time_used*1000000);
@@ -310,12 +316,12 @@ int main(int argc, char **argv) {
       ssim_compute_8u(&FrSSIMScore_float, &FrESSIMScore_float, InpYuvBuff, stride,
                                       ReconYuvBuff, stride, Width, Height, WSize,
                                       WStride, 1, SSIM_MODE_PERF_FLOAT,
-                                      SSIM_SPATIAL_POOLING_BOTH);
-#if PROFILING_PRINTS   
+                                      SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+#if PROFILING_PRINTS
         end = clock();
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
         printf("\t cpu_time_used_Float: %lf microsecs\n",cpu_time_used*1000000);
-#endif                                      
+#endif
     }else {
       memset(InpYuvBuffHbd, 0, YPlaneSize);
       memset(ReconYuvBuffHbd, 0, YPlaneSize);
@@ -330,8 +336,8 @@ int main(int argc, char **argv) {
       ssim_compute_16u(&FrSSIMScore_Int, &FrESSIMScore_Int, InpYuvBuffHbd, stride,
                                       ReconYuvBuffHbd, stride, Width, Height, BitDepthMinus8,
                                       WSize, WStride, 1, SSIM_MODE_PERF_INT,
-                                      SSIM_SPATIAL_POOLING_BOTH);
-#if PROFILING_PRINTS   
+                                      SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+#if PROFILING_PRINTS
         end = clock();
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
         printf("\t cpu_time_used_Int: %lf microsecs\n",cpu_time_used*1000000);
@@ -342,13 +348,13 @@ int main(int argc, char **argv) {
       ssim_compute_16u(&FrSSIMScore_float, &FrESSIMScore_float, InpYuvBuffHbd, stride,
                                       ReconYuvBuffHbd, stride, Width, Height, BitDepthMinus8,
                                       WSize, WStride, 1, SSIM_MODE_PERF_FLOAT,
-                                      SSIM_SPATIAL_POOLING_BOTH);
-#if PROFILING_PRINTS   
+                                      SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+#if PROFILING_PRINTS
         end = clock();
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
         printf("\t cpu_time_used_Float: %lf microsecs\n",cpu_time_used*1000000);
 #endif
-    }                                
+    }
 #if DEBUG_PRINTS
     printf("\n FrNum: %ld, SSIMInt : %f, SSIMFlt : %f, ESSIMInt : %f, ESSIMFlt : %f",\
             FrNum, FrSSIMScore_Int, FrSSIMScore_float,FrESSIMScore_Int,FrESSIMScore_float);
@@ -377,7 +383,7 @@ int main(int argc, char **argv) {
       MAXABSFrSSIMScore_Int = FrSSIMScore_Int;
       MAXABSFrESSIMScore_Int = FrESSIMScore_Int;
     }
-#endif 
+#endif
   }
   printf("\n");
 #if  GET_MAX_ABS_INTvsFLOAT_FRAME

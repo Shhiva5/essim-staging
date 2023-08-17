@@ -37,6 +37,8 @@ struct Dim {
   uint32_t height;
 };
 
+const uint32_t SSIM_POOLING_MINKOWSKI_P = 4;
+
 const std::array<Dim, 10> dims{{{16, 16},
                                 {18, 18},
                                 {20, 20},
@@ -74,11 +76,19 @@ eSSIMResult ssim_compute_threaded(
     const uint32_t width, const uint32_t height, const uint32_t bitDepthMinus8,
     const uint32_t windowSize, const uint32_t windowStride, const uint32_t d2h,
     const eSSIMMode mode, const eSSIMFlags flags, const uint32_t numThreads) {
+#if UPDATED_INTEGER_IMPLEMENTATION
+  std::unique_ptr<SSIM_CTX_ARRAY, ctx_array_deallocator> ctx_array(
+      ssim_allocate_ctx_array(
+          numThreads, width, height, bitDepthMinus8,
+          bitDepthMinus8 > 0 ? SSIM_DATA_16BIT : SSIM_DATA_8BIT, windowSize,
+          windowStride, 1, mode, flags, SSIM_POOLING_MINKOWSKI_P));
+#else
   std::unique_ptr<SSIM_CTX_ARRAY, ctx_array_deallocator> ctx_array(
       ssim_allocate_ctx_array(
           numThreads, width, height, bitDepthMinus8,
           bitDepthMinus8 > 0 ? SSIM_DATA_16BIT : SSIM_DATA_8BIT, windowSize,
           windowStride, 1, mode, flags));
+#endif
   if (!ctx_array) {
     return SSIM_ERR_ALLOC;
   }
@@ -94,8 +104,13 @@ eSSIMResult ssim_compute_threaded(
     ssim_reset_ctx(ctx);
     const uint32_t beginHeight = height * t / numThreads;
     const uint32_t endHeight = height * (t + 1) / numThreads;
+#if UPDATED_INTEGER_IMPLEMENTATION
+    return ssim_compute_ctx(ctx, ref, refStride, cmp, cmpStride, beginHeight,
+                            endHeight - beginHeight, SSIM_POOLING_MINKOWSKI_P);
+#else
     return ssim_compute_ctx(ctx, ref, refStride, cmp, cmpStride, beginHeight,
                             endHeight - beginHeight);
+#endif
   };
 
   for (size_t t = 1; t < numThreads; ++t) {
@@ -111,7 +126,12 @@ eSSIMResult ssim_compute_threaded(
   }
 
   if (SSIM_OK == res) {
+#if UPDATED_INTEGER_IMPLEMENTATION
+    res = ssim_aggregate_score(pSsimScore, pEssimScore, ctx_array.get(),
+                               SSIM_POOLING_MINKOWSKI_P);
+#else
     res = ssim_aggregate_score(pSsimScore, pEssimScore, ctx_array.get());
+#endif
   }
 
   return res;
@@ -148,8 +168,8 @@ TEST(ssimTest, threading) {
         auto resRef = ssim_compute_8u(&ssimRef, &essimRef, pRef, refStride, pCmp,
                                       cmpStride, width, height, windowSize,
                                       windowStride, 1, SSIM_MODE_PERF_INT,
-                                      SSIM_SPATIAL_POOLING_MINK);
-
+                                      SSIM_SPATIAL_POOLING_MINK,
+                                      SSIM_POOLING_MINKOWSKI_P);
         // call and test threaded versions
         for (uint32_t numThreads = 1; numThreads < MAX_NUM_THREADS;
              ++numThreads) {
@@ -205,8 +225,7 @@ TEST(ssimTest, threading_10bit) {
         auto resRef = ssim_compute_16u(
             &ssimRef, &essimRef, pRef, refStride, pCmp, cmpStride, width, height,
             bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,
-            SSIM_SPATIAL_POOLING_MINK);
-
+            SSIM_SPATIAL_POOLING_MINK, SSIM_POOLING_MINKOWSKI_P);
         // call and test threaded versions
         for (uint32_t numThreads = 1; numThreads < MAX_NUM_THREADS;
              ++numThreads) {
@@ -259,10 +278,18 @@ TEST(ssimTest, threading) {
                  << windowStride<< std::endl;
         float essimRef = 0;
         float ssimRef = 0;
+#if UPDATED_INTEGER_IMPLEMENTATION
+        auto resRef = ssim_compute_8u(&ssimRef, &essimRef, pRef, refStride, pCmp,
+                                      cmpStride, width, height, windowSize,
+                                      windowStride, 1, SSIM_MODE_REF,
+                                      SSIM_SPATIAL_POOLING_BOTH,
+                                      SSIM_POOLING_MINKOWSKI_P);
+#else
         auto resRef = ssim_compute_8u(&ssimRef, &essimRef, pRef, refStride, pCmp,
                                       cmpStride, width, height, windowSize,
                                       windowStride, 1, SSIM_MODE_REF,
                                       SSIM_SPATIAL_POOLING_BOTH);
+#endif
         std::cout << "ssimRef : " << (float)ssimRef <<  " essimRef : "
                   << (float)essimRef << std::endl;
 #if PROFILING_PRINTS
@@ -273,10 +300,18 @@ TEST(ssimTest, threading) {
 #endif
         float essimRefInt = 0;
 		    float ssimRefInt = 0;
+#if UPDATED_INTEGER_IMPLEMENTATION
+		    auto resRefInt = ssim_compute_8u(&ssimRefInt, &essimRefInt, pRef, refStride, pCmp,
+                                      cmpStride, width, height, windowSize,
+                                      windowStride, 1, SSIM_MODE_PERF_INT,
+                                      SSIM_SPATIAL_POOLING_BOTH,
+                                      SSIM_POOLING_MINKOWSKI_P);
+#else
 		    auto resRefInt = ssim_compute_8u(&ssimRefInt, &essimRefInt, pRef, refStride, pCmp,
                                       cmpStride, width, height, windowSize,
                                       windowStride, 1, SSIM_MODE_PERF_INT,
                                       SSIM_SPATIAL_POOLING_BOTH);
+#endif
 		    std::cout << "ssimRef_Int : " << (float)ssimRefInt <<  " essimRef_Int : "
                   << (float)essimRefInt << std::endl;
 #if PROFILING_PRINTS
@@ -290,10 +325,17 @@ TEST(ssimTest, threading) {
 #endif
 		    float essimRefFloat = 0;
 		    float ssimRefFloat = 0;
+#if UPDATED_INTEGER_IMPLEMENTATION
+		    auto resRefFloat = ssim_compute_8u(&ssimRefFloat, &essimRefFloat, pRef, refStride, pCmp,
+                                      cmpStride, width, height, windowSize,
+                                      windowStride, 1, SSIM_MODE_PERF_FLOAT,
+                                      SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+#else
 		    auto resRefFloat = ssim_compute_8u(&ssimRefFloat, &essimRefFloat, pRef, refStride, pCmp,
                                       cmpStride, width, height, windowSize,
                                       windowStride, 1, SSIM_MODE_PERF_FLOAT,
                                       SSIM_SPATIAL_POOLING_BOTH);
+#endif
 		    std::cout << "ssimRefFloat : " << (float)ssimRefFloat <<  " essimRefFloat : "
                   << (float)essimRefFloat << std::endl;
 #if PROFILING_PRINTS
@@ -357,10 +399,17 @@ TEST(ssimTest, threading_10bit) {
         // call the reference function
             float essimRef = 0;
 		    float ssimRef = 0;
+#if UPDATED_INTEGER_IMPLEMENTATION
+		    auto resRef = ssim_compute_16u(
+             &ssimRef, &essimRef, pRef, refStride, pCmp, cmpStride, width, height,
+            bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_REF,
+            SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+#else
 		    auto resRef = ssim_compute_16u(
              &ssimRef, &essimRef, pRef, refStride, pCmp, cmpStride, width, height,
             bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_REF,
             SSIM_SPATIAL_POOLING_BOTH);
+#endif
 		    std::cout << "ssimRef : " << (float)ssimRef <<  " essimRef : "
                   << (float)essimRef << std::endl;
 #if PROFILING_PRINTS
@@ -371,10 +420,17 @@ TEST(ssimTest, threading_10bit) {
 #endif
         float essimRefInt = 0;
 		    float ssimRefInt = 0;
+#if UPDATED_INTEGER_IMPLEMENTATION
+		    auto resRefInt = ssim_compute_16u(
+             &ssimRefInt, &essimRefInt, pRef, refStride, pCmp, cmpStride, width, height,
+            bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,
+            SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+#else
 		    auto resRefInt = ssim_compute_16u(
              &ssimRefInt, &essimRefInt, pRef, refStride, pCmp, cmpStride, width, height,
             bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,
             SSIM_SPATIAL_POOLING_BOTH);
+#endif
 		    std::cout << "ssimRef_Int : " << (float)ssimRefInt <<  " essimRef_Int : "
                   << (float)essimRefInt << std::endl;
 #if PROFILING_PRINTS
@@ -388,10 +444,17 @@ TEST(ssimTest, threading_10bit) {
 #endif
         float ssimRefFloat = 0;
         float essimRefFloat = 0 ;
+#if UPDATED_INTEGER_IMPLEMENTATION
+        auto resRefFloat = ssim_compute_16u(
+            &ssimRefFloat, &essimRefFloat, pRef, refStride, pCmp, cmpStride, width, height,
+            bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_FLOAT,
+            SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+#else
         auto resRefFloat = ssim_compute_16u(
             &ssimRefFloat, &essimRefFloat, pRef, refStride, pCmp, cmpStride, width, height,
             bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_FLOAT,
             SSIM_SPATIAL_POOLING_BOTH);
+#endif
         std::cout << "ssimRefFloat : " << (float)ssimRefFloat <<  " essimRefFloat : "
                   << (float)essimRefFloat << std::endl;
 #if PROFILING_PRINTS
