@@ -156,10 +156,10 @@ typedef int64_t (*calc_window_ssim_proc_t)(CALC_WINDOW_SSIM_FORMAL_ARGS);
       const size_t numWindows, const uint32_t windowSize,  \
       const uint32_t windowStride, const uint32_t bitDepthMinus8, \
       uint32_t *div_lookup_ptr, uint32_t SSIMValRtShiftBits, \
-      uint32_t SSIMValRtShiftHalfRound, const uint32_t SSIM_POOLING_MINKOWSKI_P
+      uint32_t SSIMValRtShiftHalfRound, const uint32_t essim_mink_value
 #define SUM_WINDOWS_ACTUAL_ARGS \
   res, pBuf, numWindows, windowSize, windowStride, bitDepthMinus8, \
-  div_lookup_ptr, SSIMValRtShiftBits, SSIMValRtShiftHalfRound, SSIM_POOLING_MINKOWSKI_P
+  div_lookup_ptr, SSIMValRtShiftBits, SSIMValRtShiftHalfRound, essim_mink_value
 #elif !UPDATED_INTEGER_IMPLEMENTATION
 #define SUM_WINDOWS_FORMAL_ARGS                            \
   SSIM_RES *const res, SSIM_4X4_WINDOW_BUFFER *const pBuf, \
@@ -291,7 +291,7 @@ eSSIMResult ssim_compute_prec(
     const ptrdiff_t refStride,
     const void* cmp,
     const ptrdiff_t cmpStride,
-    const uint32_t SSIM_POOLING_MINKOWSKI_P);
+    const uint32_t essim_mink_value);
 
 eSSIMResult ssim_compute_perf(
     SSIM_CTX* const ctx,
@@ -301,7 +301,7 @@ eSSIMResult ssim_compute_perf(
     const ptrdiff_t cmpStride,
     const uint32_t roiY,
     const uint32_t roiHeight,
-    const uint32_t SSIM_POOLING_MINKOWSKI_P);
+    const uint32_t essim_mink_value);
 #else
 eSSIMResult ssim_compute_prec(
     SSIM_CTX* const ctx,

@@ -650,7 +650,7 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     sum_windows_8x4_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8,div_lookup_ptr,
                              SSIMValRtShiftBits,SSIMValRtShiftHalfRound,
-                             SSIM_POOLING_MINKOWSKI_P);
+                             essim_mink_value);
 #elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8);
@@ -768,7 +768,7 @@ void sum_windows_8x4_float_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
 #if UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_float_8u_c(res, &buf, numWindows - i, windowSize,
                                windowStride, bitDepthMinus8,NULL,0,0,
-                               SSIM_POOLING_MINKOWSKI_P);
+                               essim_mink_value);
 #elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_float_8u_c(res, &buf, numWindows - i, windowSize,
                                windowStride, bitDepthMinus8);
@@ -908,11 +908,11 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
                   SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
       ssim_sum += ssim_val;
       int64_t const_1_minus_ssim_val = const_1 - ssim_val;
-      if(SSIM_POOLING_MINKOWSKI_P == 4) {
+      if(essim_mink_value == 4) {
             mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
                                 const_1_minus_ssim_val * const_1_minus_ssim_val;
       } else {
-            /*SSIM_POOLING_MINKOWSKI_P == 3*/
+            /*essim_mink_value == 3*/
             mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
                                 const_1_minus_ssim_val;
       }
@@ -927,7 +927,7 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
                              SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
-                             SSIM_POOLING_MINKOWSKI_P);
+                             essim_mink_value);
   }
 } /* void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) */
 
@@ -999,11 +999,11 @@ void sum_windows_8x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
                   SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
       ssim_sum += ssim_val;
       int64_t const_1_minus_ssim_val = const_1 - ssim_val;
-      if(SSIM_POOLING_MINKOWSKI_P == 4) {
+      if(essim_mink_value == 4) {
             mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
                                 const_1_minus_ssim_val * const_1_minus_ssim_val;
       } else {
-            /*SSIM_POOLING_MINKOWSKI_P == 3*/
+            /*essim_mink_value == 3*/
             mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
                                 const_1_minus_ssim_val;
       }
@@ -1018,7 +1018,7 @@ void sum_windows_8x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
                              SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
-                             SSIM_POOLING_MINKOWSKI_P);
+                             essim_mink_value);
   }
 }
 
@@ -1127,11 +1127,11 @@ void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
                   SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
       ssim_sum += ssim_val;
       int64_t const_1_minus_ssim_val = const_1 - ssim_val;
-      if(SSIM_POOLING_MINKOWSKI_P == 4) {
+      if(essim_mink_value == 4) {
             mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
                                 const_1_minus_ssim_val * const_1_minus_ssim_val;
       } else {
-            /*SSIM_POOLING_MINKOWSKI_P == 3*/
+            /*essim_mink_value == 3*/
             mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
                                 const_1_minus_ssim_val;
       }
@@ -1146,7 +1146,7 @@ void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
                              SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
-							 SSIM_POOLING_MINKOWSKI_P);
+							 essim_mink_value);
   }
 }
 

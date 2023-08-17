@@ -14,7 +14,7 @@ eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
                               const ptrdiff_t refStride, const void *cmp,
                               const ptrdiff_t cmpStride, const uint32_t roiY,
                               const uint32_t roiHeight,
-                              const uint32_t SSIM_POOLING_MINKOWSKI_P)
+                              const uint32_t essim_mink_value)
 #else
 eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
                               const ptrdiff_t refStride, const void *cmp,
@@ -74,7 +74,7 @@ eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
     sum_windows_proc(&ctx->res, &ctx->windowRows[0].ptrs, numWindows,
                      windowSize, windowStride, ctx->params->bitDepthMinus8,
                      ctx->div_lookup_ptr, ctx->SSIMValRtShiftBits,
-                     ctx->SSIMValRtShiftHalfRound, SSIM_POOLING_MINKOWSKI_P);
+                     ctx->SSIMValRtShiftHalfRound, essim_mink_value);
 #elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_proc(&ctx->res, &ctx->windowRows[0].ptrs, numWindows,
                      windowSize, windowStride, ctx->params->bitDepthMinus8);

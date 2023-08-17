@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
   uint32_t i = 1;
   std::string InpYuvPath = "NULL", ReconYuvPath = "NULL";
   uint32_t Width = 0, Height = 0, WSize = 8, WStride = 8;
-  uint32_t Mode = 1, BitDepth = 8, SSIM_POOLING_MINKOWSKI_P = 4;
+  uint32_t Mode = 1, BitDepth = 8, essim_mink_value = 4;
   eSSIMMode ModeEnum;
 
   /*Read cmd line args*/
@@ -144,8 +144,8 @@ int main(int argc, char **argv) {
         std::cout << "BitDepth :" << BitDepth << std::endl;
       }
       else if (strcmp(argv[i],"-mink")==0) {
-        SSIM_POOLING_MINKOWSKI_P = atoi(argv[++i]);
-        std::cout << "SSIM Minkowski Pooling :" << SSIM_POOLING_MINKOWSKI_P << std::endl;
+        essim_mink_value = atoi(argv[++i]);
+        std::cout << "SSIM Minkowski Pooling :" << essim_mink_value << std::endl;
       }
       else {
         std::cout << "Unknow argument :" << argv[i] << std::endl;
@@ -304,7 +304,7 @@ int main(int argc, char **argv) {
       ssim_compute_8u(&FrSSIMScore_Int, &FrESSIMScore_Int, InpYuvBuff, stride,
                                       ReconYuvBuff, stride, Width, Height, WSize,
                                       WStride, 1, SSIM_MODE_PERF_INT,
-                                      SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+                                      SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
 #if PROFILING_PRINTS
         end = clock();
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -316,7 +316,7 @@ int main(int argc, char **argv) {
       ssim_compute_8u(&FrSSIMScore_float, &FrESSIMScore_float, InpYuvBuff, stride,
                                       ReconYuvBuff, stride, Width, Height, WSize,
                                       WStride, 1, SSIM_MODE_PERF_FLOAT,
-                                      SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+                                      SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
 #if PROFILING_PRINTS
         end = clock();
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -336,7 +336,7 @@ int main(int argc, char **argv) {
       ssim_compute_16u(&FrSSIMScore_Int, &FrESSIMScore_Int, InpYuvBuffHbd, stride,
                                       ReconYuvBuffHbd, stride, Width, Height, BitDepthMinus8,
                                       WSize, WStride, 1, SSIM_MODE_PERF_INT,
-                                      SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+                                      SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
 #if PROFILING_PRINTS
         end = clock();
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -348,7 +348,7 @@ int main(int argc, char **argv) {
       ssim_compute_16u(&FrSSIMScore_float, &FrESSIMScore_float, InpYuvBuffHbd, stride,
                                       ReconYuvBuffHbd, stride, Width, Height, BitDepthMinus8,
                                       WSize, WStride, 1, SSIM_MODE_PERF_FLOAT,
-                                      SSIM_SPATIAL_POOLING_BOTH, SSIM_POOLING_MINKOWSKI_P);
+                                      SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
 #if PROFILING_PRINTS
         end = clock();
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;

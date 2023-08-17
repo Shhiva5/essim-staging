@@ -443,11 +443,11 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
  #endif
 
     int64_t const_1_minus_ssim_val = const_1 - ssim_val;
-    if(SSIM_POOLING_MINKOWSKI_P == 4) {
+    if(essim_mink_value == 4) {
       mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
                           * const_1_minus_ssim_val* const_1_minus_ssim_val;
     } else {
-      /*SSIM_POOLING_MINKOWSKI_P == 3*/
+      /*essim_mink_value == 3*/
       mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
                           * const_1_minus_ssim_val;
     }
@@ -540,11 +540,11 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
     }
  #endif
     int64_t const_1_minus_ssim_val = const_1 - ssim_val;
-    if(SSIM_POOLING_MINKOWSKI_P == 4) {
+    if(essim_mink_value == 4) {
       mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
                           * const_1_minus_ssim_val * const_1_minus_ssim_val;
     } else {
-      /*SSIM_POOLING_MINKOWSKI_P == 3*/
+      /*essim_mink_value == 3*/
       mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
                           * const_1_minus_ssim_val;
     }
@@ -597,7 +597,7 @@ void sum_windows_float_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
     const float ssim_val = calc_window_ssim_float(&wnd, windowSize, C1, C2);
 
     ssim_sum += ssim_val;
-    ssim_mink_sum += pow(1 - ssim_val, SSIM_POOLING_MINKOWSKI_P);
+    ssim_mink_sum += pow(1 - ssim_val, essim_mink_value);
   }
 
   res->ssim_sum_f += ssim_sum;
@@ -650,7 +650,7 @@ void sum_windows_float_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
 
     const float ssim_val = calc_window_ssim_float(&wnd, windowSize, C1, C2);
     ssim_sum += ssim_val;
-    ssim_mink_sum += pow((1 - ssim_val), SSIM_POOLING_MINKOWSKI_P);
+    ssim_mink_sum += pow((1 - ssim_val), essim_mink_value);
   }
 
   res->ssim_sum_f += ssim_sum;

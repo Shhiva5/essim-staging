@@ -63,7 +63,7 @@ eSSIMResult ssim_compute_8u(float *const pSsimScore, float *const pEssimScore,
                             const uint32_t windowSize,
                             const uint32_t windowStride, const uint32_t d2h,
                             const eSSIMMode mode, const eSSIMFlags flags,
-                            const uint32_t SSIM_POOLING_MINKOWSKI_P)
+                            const uint32_t essim_mink_value)
 #else
 eSSIMResult ssim_compute_8u(float *const pSsimScore, float *const pEssimScore,
                             const uint8_t *ref, const ptrdiff_t refStride,
@@ -96,7 +96,7 @@ eSSIMResult ssim_compute_8u(float *const pSsimScore, float *const pEssimScore,
 #if UPDATED_INTEGER_IMPLEMENTATION
   SSIM_CTX_ARRAY *ctx_array =
       ssim_allocate_ctx_array(1, width, height, 0, SSIM_DATA_8BIT, windowSize,
-                              windowStride, d2h, mode, flags, SSIM_POOLING_MINKOWSKI_P);
+                              windowStride, d2h, mode, flags, essim_mink_value);
 #else
   SSIM_CTX_ARRAY *ctx_array =
       ssim_allocate_ctx_array(1, width, height, 0, SSIM_DATA_8BIT, windowSize,
@@ -114,11 +114,11 @@ eSSIMResult ssim_compute_8u(float *const pSsimScore, float *const pEssimScore,
 
 #if UPDATED_INTEGER_IMPLEMENTATION
     res = ssim_compute_ctx(ctx, ref, refStride, cmp, cmpStride, 0, height,
-                           SSIM_POOLING_MINKOWSKI_P);
+                           essim_mink_value);
 
     if (SSIM_OK == res) {
       res = ssim_aggregate_score(pSsimScore, pEssimScore, ctx_array,
-                                 SSIM_POOLING_MINKOWSKI_P);
+                                 essim_mink_value);
     }
 #else
     res = ssim_compute_ctx(ctx, ref, refStride, cmp, cmpStride, 0, height);
@@ -147,7 +147,7 @@ eSSIMResult ssim_compute_16u(float *const pSsimScore, float *const pEssimScore,
                              const uint32_t windowSize,
                              const uint32_t windowStride, const uint32_t d2h,
                              const eSSIMMode mode, const eSSIMFlags flags,
-                             const uint32_t SSIM_POOLING_MINKOWSKI_P)
+                             const uint32_t essim_mink_value)
 #else
 eSSIMResult ssim_compute_16u(float *const pSsimScore, float *const pEssimScore,
                              const uint16_t *ref, const ptrdiff_t refStride,
@@ -182,7 +182,7 @@ eSSIMResult ssim_compute_16u(float *const pSsimScore, float *const pEssimScore,
   SSIM_CTX_ARRAY *ctx_array =
       ssim_allocate_ctx_array(1, width, height, bitDepthMinus8, SSIM_DATA_16BIT,
                               windowSize, windowStride, d2h, mode, flags,
-                              SSIM_POOLING_MINKOWSKI_P);
+                              essim_mink_value);
 #else
   SSIM_CTX_ARRAY *ctx_array =
       ssim_allocate_ctx_array(1, width, height, bitDepthMinus8, SSIM_DATA_16BIT,
@@ -199,11 +199,11 @@ eSSIMResult ssim_compute_16u(float *const pSsimScore, float *const pEssimScore,
 
 #if UPDATED_INTEGER_IMPLEMENTATION
     res = ssim_compute_ctx(ctx, ref, refStride, cmp, cmpStride, 0, height,
-                           SSIM_POOLING_MINKOWSKI_P);
+                           essim_mink_value);
 
     if (SSIM_OK == res) {
       res = ssim_aggregate_score(pSsimScore, pEssimScore, ctx_array,
-                                 SSIM_POOLING_MINKOWSKI_P);
+                                 essim_mink_value);
     }
 #else
     res = ssim_compute_ctx(ctx, ref, refStride, cmp, cmpStride, 0, height);
@@ -289,7 +289,7 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
                         const eSSIMDataType dataType, const uint32_t windowSize,
                         const uint32_t windowStride, const uint32_t d2h,
                         const eSSIMMode eSSIMmode, const eSSIMFlags flags,
-                        const uint32_t SSIM_POOLING_MINKOWSKI_P)
+                        const uint32_t essim_mink_value)
 #else
 SSIM_CTX_ARRAY *
 ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
@@ -431,12 +431,12 @@ p->params.calc_window_ssim_proc = (SSIM_DATA_8BIT == dataType)
     /*generating LUT to avoid final stage division in cal window for ssim_val*/
     div_lookup_ptr = div_lookup_generator();
 
-    if(SSIM_POOLING_MINKOWSKI_P == 4) {
+    if(essim_mink_value == 4) {
       const uint64_t MAX_SSIM_ACCUMULATED_SUM_VALUE = 18446744073709551615;
     }
     uint32_t numWindows = GetTotalWindows(width, height, windowSize, windowStride);
     uint32_t ssimFinalPrecisionMaxVal =
-                ceil(pow(MAX_SSIM_ACCUMULATED_SUM_VALUE/(double)numWindows, 1.0/SSIM_POOLING_MINKOWSKI_P)/2);
+                ceil(pow(MAX_SSIM_ACCUMULATED_SUM_VALUE/(double)numWindows, 1.0/essim_mink_value)/2);
     uint32_t ssimFinalPrecisionInBits = GetTotalBitsInNumber(ssimFinalPrecisionMaxVal);
     int32_t additionlRtShiftBits = DEFAULT_Q_FORMAT_FOR_SSIM_VAL - (int32_t)ssimFinalPrecisionInBits;
     SSIMValRtShiftBits = DEFAULT_Q_FORMAT_FOR_SSIM_VAL + additionlRtShiftBits;
@@ -495,7 +495,7 @@ eSSIMResult ssim_compute_ctx(SSIM_CTX *const ctx, const void *ref,
                              const ptrdiff_t refStride, const void *cmp,
                              const ptrdiff_t cmpStride, const uint32_t roiY,
                              const uint32_t roiHeight,
-                             const uint32_t SSIM_POOLING_MINKOWSKI_P)
+                             const uint32_t essim_mink_value)
 #else
 eSSIMResult ssim_compute_ctx(SSIM_CTX *const ctx, const void *ref,
                              const ptrdiff_t refStride, const void *cmp,
@@ -532,10 +532,10 @@ eSSIMResult ssim_compute_ctx(SSIM_CTX *const ctx, const void *ref,
 #if UPDATED_INTEGER_IMPLEMENTATION
   if (SSIM_MODE_REF == mode) {
     return ssim_compute_prec(ctx, ref, refStride, cmp, cmpStride,
-                             SSIM_POOLING_MINKOWSKI_P);
+                             essim_mink_value);
   } else {
     return ssim_compute_perf(ctx, ref, refStride, cmp, cmpStride, roiY,
-                             roiHeight, SSIM_POOLING_MINKOWSKI_P);
+                             roiHeight, essim_mink_value);
   }
 #else
   if (SSIM_MODE_REF == mode) {
@@ -552,7 +552,7 @@ eSSIMResult ssim_compute_ctx(SSIM_CTX *const ctx, const void *ref,
 eSSIMResult ssim_aggregate_score(float *const pSsimScore,
                                  float *const pEssimScore,
                                  const SSIM_CTX_ARRAY *ctxa,
-                                 const uint32_t SSIM_POOLING_MINKOWSKI_P)
+                                 const uint32_t essim_mink_value)
 #else
 eSSIMResult ssim_aggregate_score(float *const pSsimScore,
                                  float *const pEssimScore,
@@ -593,14 +593,14 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
 #if UPDATED_INTEGER_IMPLEMENTATION
         if(ssim_mink_sum > 0.000000001 || ssim_mink_sum < -0.000000001) {
             *pEssimScore = 1.0 - pow(ssim_mink_sum / (float)numWindows,
-                                 1.0 / SSIM_POOLING_MINKOWSKI_P);
+                                 1.0 / essim_mink_value);
         }
         else {
           *pEssimScore = 1.0;
         }
 #elif !UPDATED_INTEGER_IMPLEMENTATION
       *pEssimScore = 1.0 - pow(ssim_mink_sum / (float)numWindows,
-                                 1.0 / SSIM_POOLING_MINKOWSKI_P);
+                                 1.0 / essim_mink_value);
 #endif
       } else {
         return SSIM_ERR_FAILED;
@@ -651,7 +651,7 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
 #if UPDATED_INTEGER_IMPLEMENTATION
         double avg_ssim_mink_sum =  (double)ssim_mink_sum/numWindows;
         *pEssimScore = 1.0 - (double)(pow(avg_ssim_mink_sum,
-                                 1.0 / SSIM_POOLING_MINKOWSKI_P))/const_1;
+                                 1.0 / essim_mink_value))/const_1;
 #elif !UPDATED_INTEGER_IMPLEMENTATION
         // TODO set pEssimScore to equivalent of: 1.0 - (ssim_mink_sum /
         // numWindows) ** 1/4 return float value rather than shifted by
@@ -659,7 +659,7 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
          *pEssimScore =
             1.0 - pow(((ssim_mink_sum + (numWindows / 2)) / numWindows) /
                           (1u << SSIM_LOG2_SCALE),
-                      1.0 / SSIM_POOLING_MINKOWSKI_P);
+                      1.0 / essim_mink_value);
 #endif
       } else {
         return SSIM_ERR_FAILED;

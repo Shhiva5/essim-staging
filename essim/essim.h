@@ -85,7 +85,7 @@ eSSIMResult ssim_compute_8u(
     const uint32_t d2h,
     const eSSIMMode mode,
     const eSSIMFlags flags,
-    const uint32_t SSIM_POOLING_MINKOWSKI_P);
+    const uint32_t essim_mink_value);
 
 eSSIMResult ssim_compute_16u(
     float* const pSsimScore,
@@ -102,7 +102,7 @@ eSSIMResult ssim_compute_16u(
     const uint32_t d2h,
     const eSSIMMode mode,
     const eSSIMFlags flags,
-    const uint32_t SSIM_POOLING_MINKOWSKI_P);
+    const uint32_t essim_mink_value);
 #else
 eSSIMResult ssim_compute_8u(
     float* const pSsimScore,
@@ -158,7 +158,7 @@ SSIM_CTX_ARRAY* ssim_allocate_ctx_array(
     const uint32_t d2h,
     const eSSIMMode mode,
     const eSSIMFlags flags,
-    const uint32_t SSIM_POOLING_MINKOWSKI_P);
+    const uint32_t essim_mink_value);
 #else
 SSIM_CTX_ARRAY* ssim_allocate_ctx_array(
     const size_t numCtx,
@@ -191,7 +191,7 @@ eSSIMResult ssim_compute_ctx(
     const ptrdiff_t cmpStride,
     const uint32_t roiY,
     const uint32_t roiHeight,
-    const uint32_t SSIM_POOLING_MINKOWSKI_P);
+    const uint32_t essim_mink_value);
 
 /* aggregate partial SSIM scores from contexts and provide the final SSIM score
  */
@@ -199,7 +199,7 @@ eSSIMResult ssim_aggregate_score(
     float* const pSsimScore,
     float* const pEssimScore,
     const SSIM_CTX_ARRAY* ctxa,
-    const uint32_t SSIM_POOLING_MINKOWSKI_P);
+    const uint32_t essim_mink_value);
 #else
 /* compute partial SSIM score of an image region */
 eSSIMResult ssim_compute_ctx(
@@ -252,7 +252,7 @@ inline context_array_t AllocateCtxArray(
     const uint32_t d2h,
     const eSSIMMode mode,
     const eSSIMFlags flags,
-    const uint32_t SSIM_POOLING_MINKOWSKI_P) {
+    const uint32_t essim_mink_value) {
   return context_array_t(ssim_allocate_ctx_array(
       numCtx,
       width,
@@ -264,7 +264,7 @@ inline context_array_t AllocateCtxArray(
       d2h,
       mode,
       flags,
-      SSIM_POOLING_MINKOWSKI_P));
+      essim_mink_value));
 }
 #else
 inline context_array_t AllocateCtxArray(

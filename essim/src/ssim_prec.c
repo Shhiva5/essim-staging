@@ -79,7 +79,7 @@ void load_window_16u_c(LOAD_WINDOW_FORMAL_ARGS) {
 eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
                               const ptrdiff_t refStride, const void *cmp,
                               const ptrdiff_t cmpStride,
-                              const uint32_t SSIM_POOLING_MINKOWSKI_P)
+                              const uint32_t essim_mink_value)
 #else
 eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
                               const ptrdiff_t refStride, const void *cmp,
@@ -132,11 +132,11 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
 
       ssim_sum += ssim_val;
       int64_t const_1_minus_ssim_val = const_1 - ssim_val;
-      if(SSIM_POOLING_MINKOWSKI_P == 4) {
+      if(essim_mink_value == 4) {
         mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
                           * const_1_minus_ssim_val * const_1_minus_ssim_val;
       } else {
-        /*SSIM_POOLING_MINKOWSKI_P == 3*/
+        /*essim_mink_value == 3*/
         mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
                             * const_1_minus_ssim_val;
       }
