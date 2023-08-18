@@ -75,9 +75,17 @@ void load_window_16u_c(LOAD_WINDOW_FORMAL_ARGS) {
 
 } /* void load_window_16u_c(LOAD_WINDOW_FORMAL_ARGS) */
 
+#if UPDATED_INTEGER_IMPLEMENTATION
 eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
                               const ptrdiff_t refStride, const void *cmp,
-                              const ptrdiff_t cmpStride) {
+                              const ptrdiff_t cmpStride,
+                              const uint32_t essim_mink_value)
+#else
+eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
+                              const ptrdiff_t refStride, const void *cmp,
+                              const ptrdiff_t cmpStride)
+#endif
+{
   const load_window_proc_t load_window_proc = ctx->params->load_window_proc;
   const calc_window_ssim_proc_t calc_window_ssim_proc =
       ctx->params->calc_window_ssim_proc;
@@ -92,7 +100,13 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
   const uint32_t bitDepthMinus8 = ctx->params->bitDepthMinus8;
   const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
   const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
-  uint32_t rightShiftBits = NUM_OF_BITS_TO_RIGHTSHIFT + bitDepthMinus8;
+
+#if UPDATED_INTEGER_IMPLEMENTATION
+  int32_t extraRtShiftBitsForSSIMVal =
+          (int32_t)ctx->SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int64_t mink_pow_ssim_val = 0;
+  int64_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
+#endif
 
   int64_t ssim_mink_sum = 0, ssim_sum = 0;
   SSIM_SRC src;
@@ -112,16 +126,28 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
       src.ref = AdvancePointer(src.ref, windowStep);
       src.cmp = AdvancePointer(src.cmp, windowStep);
 #if UPDATED_INTEGER_IMPLEMENTATION
-      /*Last arguments should be SSIMValRtShiftBits & SSIMValRtShiftHalfRound,
-        this is temperory fix to avoid build errors*/
       const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2,
-        rightShiftBits, ctx->div_lookup_ptr, 0, 0);
+                    ctx->div_lookup_ptr, ctx->SSIMValRtShiftBits,
+                    ctx->SSIMValRtShiftHalfRound);
+
+      ssim_sum += ssim_val;
+      int64_t const_1_minus_ssim_val = const_1 - ssim_val;
+      if(essim_mink_value == 4) {
+        mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
+                          * const_1_minus_ssim_val * const_1_minus_ssim_val;
+      } else {
+        /*essim_mink_value == 3*/
+        mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
+                            * const_1_minus_ssim_val;
+      }
+      ssim_mink_sum += mink_pow_ssim_val;
 #elif !UPDATED_INTEGER_IMPLEMENTATION
       const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2);
-#endif
+
       ssim_sum += ssim_val;
       ssim_mink_sum +=
           (int64_t)ssim_val * ssim_val; // TODO replace with (1 - ssim) ** 4
+#endif
     }
   }
 

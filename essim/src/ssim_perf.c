@@ -9,10 +9,19 @@
 #include <essim/essim.h>
 #include <essim/inc/internal.h>
 
+#if UPDATED_INTEGER_IMPLEMENTATION
 eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
                               const ptrdiff_t refStride, const void *cmp,
                               const ptrdiff_t cmpStride, const uint32_t roiY,
-                              const uint32_t roiHeight) {
+                              const uint32_t roiHeight,
+                              const uint32_t essim_mink_value)
+#else
+eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
+                              const ptrdiff_t refStride, const void *cmp,
+                              const ptrdiff_t cmpStride, const uint32_t roiY,
+                              const uint32_t roiHeight)
+#endif
+{
   const load_4x4_windows_proc_t load_4x4_windows_proc =
       ctx->params->load_4x4_windows_proc;
   const sum_windows_proc_t sum_windows_proc = ctx->params->sum_windows_proc;
@@ -56,7 +65,7 @@ eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
     }
 
     /* sum up windows */
-#if PROFILING_PRINTS
+#if INTR_PROFILING_PRINTS
     clock_t start=0, end=0;
     double cpu_time_used=0;
     start = clock();
@@ -65,12 +74,12 @@ eSSIMResult ssim_compute_perf(SSIM_CTX *const ctx, const void *ref,
     sum_windows_proc(&ctx->res, &ctx->windowRows[0].ptrs, numWindows,
                      windowSize, windowStride, ctx->params->bitDepthMinus8,
                      ctx->div_lookup_ptr, ctx->SSIMValRtShiftBits,
-                     ctx->SSIMValRtShiftHalfRound);
+                     ctx->SSIMValRtShiftHalfRound, essim_mink_value);
 #elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_proc(&ctx->res, &ctx->windowRows[0].ptrs, numWindows,
                      windowSize, windowStride, ctx->params->bitDepthMinus8);
 #endif
-#if PROFILING_PRINTS
+#if INTR_PROFILING_PRINTS
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("\t numWindows: %i \n",numWindows);

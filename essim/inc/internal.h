@@ -26,21 +26,11 @@ extern "C" {
 
 enum { LOG2_ALIGN = 6, ALIGN = 1 << LOG2_ALIGN };
 
-#define DEBUG_PRINTS 0
-#define PROFILING_PRINTS 0
-#define ENABLE_ONLY_C_PATH 1
-#define UPDATED_INTEGER_IMPLEMENTATION 1
-#define ARM64_SIMD_FIX 1
+#define INTR_PROFILING_PRINTS 0
+#define ENABLE_ONLY_C_PATH 0
+#define ARM_BUILD_FIXES 1
 #define NEW_SIMD_FUNC 1
-
-#define ENABLE_MINK_3 0 //Default mink_4 is choosen
-
-#if ENABLE_MINK_3
-#define SSIM_POOLING_MINKOWSKI_P 3
-#else
-#define SSIM_POOLING_MINKOWSKI_P 4
-#endif
-#define NUM_OF_BITS_TO_RIGHTSHIFT 0
+#define NEW_10BIT_C_FUNC 1
 
 /*Max WxH eSSSIM can support*/
 #define MAX_FRAME_WIDTH 7680
@@ -53,16 +43,8 @@ enum { LOG2_ALIGN = 6, ALIGN = 1 << LOG2_ALIGN };
 /*ssim_val can be in the range of -1 to 1. so if ssim_val is -ve & mink pooling is 3,
 then ssim_accumulated_sum can be -ve, so we need one bit for sign representation.
 Based on above cases, we consider SSIM_ACCUMULATED_SUM maximum value can be
-2^64 (for mink 4) or 2^63 (for mink 3).
+(2^64)-1 (for mink 4) or 2^63 (for mink 3).
 */
-#if SSIM_POOLING_MINKOWSKI_P == 4
-#define MAX_SSIM_ACCUMULATED_SUM_VALUE (((uint64_t)1 << 64)-2)
-#else /*SSIM_POOLING_MINKOWSKI_P == 3*/
-#define MAX_SSIM_ACCUMULATED_SUM_VALUE (((uint64_t)1 << 63))
-#endif
-
-#define ADDITIONAL_RT_SHIFT_MINK_4 5
-#define ADDITIONAL_RT_SHIFT_MINK_3 2
 
 #define div_Q_factor 1073741824  //2^30
 
@@ -76,22 +58,15 @@ Based on above cases, we consider SSIM_ACCUMULATED_SUM maximum value can be
   With above parameters we get maximum total No. of windows per frame,
   when we convert that number into bits, we get 19 bits.
 */
-#define BITS_REQ_FOR_MAX_TOTAL_NUM_OF_WINDOWS 19
 
 #pragma pack(push, 1)
 
 typedef struct WINDOW_STATS {
   uint32_t ref_sum;
   uint32_t cmp_sum;
-#if UPDATED_INTEGER_IMPLEMENTATION
-  uint32_t ref_sigma_sqd;
-  uint32_t cmp_sigma_sqd;
-  uint32_t sigma_both;
-#elif !UPDATED_INTEGER_IMPLEMENTATION
   uint64_t ref_sigma_sqd;
   uint64_t cmp_sigma_sqd;
   uint64_t sigma_both;
-#endif
 } WINDOW_STATS;
 
 /* the temporal buffer has the following structure:
@@ -152,9 +127,9 @@ typedef struct SSIM_SRC {
 #if UPDATED_INTEGER_IMPLEMENTATION
 #define CALC_WINDOW_SSIM_FORMAL_ARGS                                      \
   WINDOW_STATS *const pWnd, const uint32_t windowSize, const uint32_t C1, \
-      const uint32_t C2, uint32_t rightShiftBits, uint32_t* div_lookup_ptr, \
+      const uint32_t C2, uint32_t* div_lookup_ptr, \
       uint32_t SSIMValRtShiftBits, uint32_t SSIMValRtShiftHalfRound
-#define CALC_WINDOW_SSIM_ACTUAL_ARGS pWnd, windowSize, C1, C2, rightShiftBits,\
+#define CALC_WINDOW_SSIM_ACTUAL_ARGS pWnd, windowSize, C1, C2,\
   div_lookup_ptr, SSIMValRtShiftBits SSIMValRtShiftHalfRound
 #elif !UPDATED_INTEGER_IMPLEMENTATION
 #define CALC_WINDOW_SSIM_FORMAL_ARGS                                      \
@@ -181,10 +156,10 @@ typedef int64_t (*calc_window_ssim_proc_t)(CALC_WINDOW_SSIM_FORMAL_ARGS);
       const size_t numWindows, const uint32_t windowSize,  \
       const uint32_t windowStride, const uint32_t bitDepthMinus8, \
       uint32_t *div_lookup_ptr, uint32_t SSIMValRtShiftBits, \
-      uint32_t SSIMValRtShiftHalfRound
+      uint32_t SSIMValRtShiftHalfRound, const uint32_t essim_mink_value
 #define SUM_WINDOWS_ACTUAL_ARGS \
   res, pBuf, numWindows, windowSize, windowStride, bitDepthMinus8, \
-  div_lookup_ptr, SSIMValRtShiftBits, SSIMValRtShiftHalfRound
+  div_lookup_ptr, SSIMValRtShiftBits, SSIMValRtShiftHalfRound, essim_mink_value
 #elif !UPDATED_INTEGER_IMPLEMENTATION
 #define SUM_WINDOWS_FORMAL_ARGS                            \
   SSIM_RES *const res, SSIM_4X4_WINDOW_BUFFER *const pBuf, \
@@ -300,13 +275,34 @@ void load_window_8u_c(LOAD_WINDOW_FORMAL_ARGS);
 void load_window_16u_c(LOAD_WINDOW_FORMAL_ARGS);
 
 int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS);
+#if UPDATED_INTEGER_IMPLEMENTATION
+int64_t calc_window_ssim_int_10bd(CALC_WINDOW_SSIM_FORMAL_ARGS);
+#endif
 int64_t calc_window_ssim_int_16u(CALC_WINDOW_SSIM_FORMAL_ARGS);
 float calc_window_ssim_float(
     WINDOW_STATS* const pWnd,
     const uint32_t windowSize,
     const float C1,
     const float C2);
+#if UPDATED_INTEGER_IMPLEMENTATION
+eSSIMResult ssim_compute_prec(
+    SSIM_CTX* const ctx,
+    const void* ref,
+    const ptrdiff_t refStride,
+    const void* cmp,
+    const ptrdiff_t cmpStride,
+    const uint32_t essim_mink_value);
 
+eSSIMResult ssim_compute_perf(
+    SSIM_CTX* const ctx,
+    const void* ref,
+    const ptrdiff_t refStride,
+    const void* cmp,
+    const ptrdiff_t cmpStride,
+    const uint32_t roiY,
+    const uint32_t roiHeight,
+    const uint32_t essim_mink_value);
+#else
 eSSIMResult ssim_compute_prec(
     SSIM_CTX* const ctx,
     const void* ref,
@@ -323,6 +319,7 @@ eSSIMResult ssim_compute_perf(
     const uint32_t roiY,
     const uint32_t roiHeight);
 
+#endif
 /*
     declare optimized functions callers
 */
@@ -332,10 +329,19 @@ void sum_windows_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 #if NEW_SIMD_FUNC
+void load_4x4_windows_10u(LOAD_4x4_WINDOWS_FORMAL_ARGS);
+
 void sum_windows_8x8_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x4_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x8_int_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x16_int_8u(SUM_WINDOWS_FORMAL_ARGS);
+
+void sum_windows_int_10u(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_8x4_int_10u(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_8x8_int_10u(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_int_10u(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_int_10u(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_int_10u(SUM_WINDOWS_FORMAL_ARGS);
 #endif
 void sum_windows_float_8u(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_float_8u(SUM_WINDOWS_FORMAL_ARGS);
@@ -353,6 +359,18 @@ void load_4x4_windows_8u_c(LOAD_4x4_WINDOWS_FORMAL_ARGS);
 void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
+
+#if NEW_10BIT_C_FUNC
+void load_4x4_windows_10u_c(LOAD_4x4_WINDOWS_FORMAL_ARGS);
+
+void sum_windows_int_10u_c(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_8x4_int_10u_c(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_8x8_int_10u_c(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_int_10u_c(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_int_10u_c(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_int_10u_c(SUM_WINDOWS_FORMAL_ARGS);
+#endif
+
 #if NEW_SIMD_FUNC
 void sum_windows_8x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x4_int_8u_c(SUM_WINDOWS_FORMAL_ARGS);
@@ -383,11 +401,20 @@ void sum_windows_8x4_int_8u_sse41(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_int_8u_sse41(SUM_WINDOWS_FORMAL_ARGS);
 
 #if NEW_SIMD_FUNC
+void load_4x4_windows_10u_avx2(LOAD_4x4_WINDOWS_FORMAL_ARGS);
+
 void sum_windows_8x4_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x8_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x4_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x8_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x16_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
+
+void sum_windows_8x4_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_8x8_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS);
 #endif
 
 void sum_windows_8x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS);
@@ -403,13 +430,21 @@ void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS);
 void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
 
 void sum_windows_8x4_float_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
-
 #if NEW_SIMD_FUNC
+void load_4x4_windows_10u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS);
+
 void sum_windows_8x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x8_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS);
+
+void sum_windows_8x4_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_8x8_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS);
 #endif
 
 #endif /* defined(_X86) || defined(_X64) */

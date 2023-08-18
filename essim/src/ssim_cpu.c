@@ -140,13 +140,13 @@ static eCPUType QueryCpuType() {
   return cpuType;
 }
 
-#elif defined(__APPLE__) || defined(MAC_OS_X)
+#elif defined(__APPLE__) || defined(MAC_OS_X) || defined(_LINUX)
 
 static eCPUType QueryCpuType() { return cpu_neon; }
 
 #else
 
-static eCPUType QueryCpuType() { return cpu_neon; }
+static eCPUType QueryCpuType() { return cpuPlain; }
 
 #endif /* defined(__ANDROID__) */
 
