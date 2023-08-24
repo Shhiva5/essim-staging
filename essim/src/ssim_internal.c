@@ -345,6 +345,52 @@ void load_4x4_windows_8u_c(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
 
 } /* void load_4x4_windows_8u_c(LOAD_4x4_WINDOWS_FORMAL_ARGS) */
 
+#if NEW_10BIT_C_FUNC
+void load_4x4_windows_10u_c(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
+  enum { WIN_SIZE = 4 };
+
+  uint8_t *pDst = pBuf->p;
+  const ptrdiff_t dstStride = pBuf->stride;
+
+  const uint16_t *pR = pSrc->ref;
+  const ptrdiff_t refStride = pSrc->refStride;
+  const uint16_t *pC = pSrc->cmp;
+  const ptrdiff_t cmpStride = pSrc->cmpStride;
+
+  for (size_t i = 0; i < num4x4Windows; ++i) {
+    uint16_t ref_sum = 0;
+    uint16_t cmp_sum = 0;
+    uint32_t ref_sigma_sqd = 0;
+    uint32_t cmp_sigma_sqd = 0;
+    uint32_t sigma_both = 0;
+
+    for (uint32_t y = 0; y < WIN_SIZE; ++y) {
+      for (size_t x = 0; x < WIN_SIZE; ++x) {
+        ref_sum += pR[x];
+        cmp_sum += pC[x];
+        ref_sigma_sqd += (uint32_t)pR[x] * pR[x];
+        cmp_sigma_sqd += (uint32_t)pC[x] * pC[x];
+        sigma_both += (uint32_t)pR[x] * pC[x];
+      }
+
+      pR = AdvancePointer(pR, refStride);
+      pC = AdvancePointer(pC, cmpStride);
+    }
+    ((uint16_t *)(pDst + 0 * dstStride))[0] = ref_sum;
+    ((uint16_t *)(pDst + 0 * dstStride))[1] = cmp_sum;
+    ((uint32_t *)(pDst + 1 * dstStride))[0] = ref_sigma_sqd;
+    ((uint32_t *)(pDst + 2 * dstStride))[0] = cmp_sigma_sqd;
+    ((uint32_t *)(pDst + 3 * dstStride))[0] = sigma_both;
+    pDst += sizeof(uint32_t);
+
+    /* set the next window */
+    pR = AdvancePointer(pR + WIN_SIZE, -WIN_SIZE * refStride);
+    pC = AdvancePointer(pC + WIN_SIZE, -WIN_SIZE * cmpStride);
+  }
+
+} /* void load_4x4_windows_10u_c(LOAD_4x4_WINDOWS_FORMAL_ARGS) */
+#endif
+
 void load_4x4_windows_16u_c(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
   enum { WIN_SIZE = 4 };
 
@@ -487,6 +533,90 @@ void sum_windows_16x8_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
 void sum_windows_16x16_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
   sum_windows_int_8u_c(SUM_WINDOWS_ACTUAL_ARGS);
 }
+#if NEW_10BIT_C_FUNC
+void sum_windows_8x4_int_10u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_10u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_8x8_int_10u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_10u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_16x4_int_10u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_10u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_16x8_int_10u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_10u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+void sum_windows_16x16_int_10u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_int_10u_c(SUM_WINDOWS_ACTUAL_ARGS);
+}
+
+void sum_windows_int_10u_c(SUM_WINDOWS_FORMAL_ARGS) {
+  const uint32_t windowSizeDiv4 = windowSize / 4;
+
+  const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
+  const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
+
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
+
+  int32_t extraRtShiftBitsForSSIMVal =
+          (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int64_t mink_pow_ssim_val = 0;
+  int64_t const_1 =
+            1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
+
+  const uint8_t *pSrc = pBuf->p;
+  const ptrdiff_t srcStride = pBuf->stride;
+
+  for (size_t i = 0; i < numWindows; ++i) {
+    WINDOW_STATS wnd = {0};
+
+    /* STEP 1. load data, no scaling */
+
+    /* windows are summed up from 4x4 regions */
+    for (uint32_t y = 0; y < windowSizeDiv4; ++y) {
+      for (size_t x = 0; x < windowSizeDiv4; ++x) {
+        wnd.ref_sum += ((uint16_t *)(pSrc + 0 * srcStride))[2 * x + 0];
+        wnd.cmp_sum += ((uint16_t *)(pSrc + 0 * srcStride))[2 * x + 1];
+        wnd.ref_sigma_sqd += ((uint32_t *)(pSrc + 1 * srcStride))[x];
+        wnd.cmp_sigma_sqd += ((uint32_t *)(pSrc + 2 * srcStride))[x];
+        wnd.sigma_both += ((uint32_t *)(pSrc + 3 * srcStride))[x];
+      }
+
+      pSrc = AdvancePointer(pSrc, 4 * srcStride);
+    }
+    /* set the next window */
+    pSrc = AdvancePointer(pSrc + windowStride, - srcStride * windowSize);
+
+    const int64_t ssim_val = calc_window_ssim_int_10bd(&wnd, windowSize, C1, C2,
+                             div_lookup_ptr, SSIMValRtShiftBits,
+                             SSIMValRtShiftHalfRound);
+
+    ssim_sum += ssim_val;
+ #if DEBUG_PRINTS
+    if(const_1 < abs((int)ssim_val)) {
+      printf("WARNING: Overflow can happen in ssim_mink_sum");
+    }
+ #endif
+
+    int64_t const_1_minus_ssim_val = const_1 - ssim_val;
+    if(essim_mink_value == 4) {
+      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
+                          * const_1_minus_ssim_val * const_1_minus_ssim_val;
+    } else {
+      /*essim_mink_value == 3*/
+      mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val
+                          * const_1_minus_ssim_val;
+    }
+    ssim_mink_sum += mink_pow_ssim_val;
+  }
+
+  res->ssim_sum += ssim_sum;
+  res->ssim_mink_sum += ssim_mink_sum;
+  res->numWindows += numWindows;
+
+} /* void sum_windows_int_10u_c(SUM_WINDOWS_FORMAL_ARGS) */
+#endif
+
 #endif
 void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
   const uint32_t windowSizeDiv4 = windowSize / 4;

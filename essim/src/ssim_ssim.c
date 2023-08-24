@@ -387,6 +387,21 @@ ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
                                          ? (sum_windows_int_8u)
                                          : (sum_windows_float_8u);
       }
+#if NEW_SIMD_FUNC
+    } else if ((bitDepthMinus8 == 2) && (SSIM_MODE_PERF_INT == mode)) {
+      p->params.load_4x4_windows_proc = load_4x4_windows_10u;
+      if ((8 == windowSize) && (4 == windowStride)) {
+        p->params.sum_windows_proc = sum_windows_8x4_int_10u;
+      } else if ((8 == windowSize) && (8 == windowStride)) {
+        p->params.sum_windows_proc = sum_windows_8x8_int_10u;
+      } else if ((16 == windowSize) && (4 == windowStride)) {
+        p->params.sum_windows_proc = sum_windows_16x4_int_10u;
+      } else if ((16 == windowSize) && (8 == windowStride)) {
+        p->params.sum_windows_proc = sum_windows_16x8_int_10u;
+      } else if ((16 == windowSize) && (16 == windowStride)) {
+        p->params.sum_windows_proc = sum_windows_16x16_int_10u;
+      }
+#endif
     } else {
     p->params.load_4x4_windows_proc = load_4x4_windows_16u;
     p->params.sum_windows_proc = (SSIM_MODE_PERF_INT == mode)

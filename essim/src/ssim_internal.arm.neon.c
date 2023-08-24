@@ -236,6 +236,93 @@ void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
 
 } /* void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) */
 
+#if NEW_SIMD_FUNC
+void load_4x4_windows_10u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
+  enum { WIN_CHUNK = 4, WIN_SIZE = 4 };
+
+  uint8_t *pDst = pBuf->p;
+  const ptrdiff_t dstStride = pBuf->stride;
+  SSIM_SRC src = *pSrc;
+  const ptrdiff_t srcStep = sizeof(uint16_t) * WIN_SIZE;
+
+  size_t i = 0;
+  for (; i + WIN_CHUNK <= num4x4Windows; i += WIN_CHUNK) {
+    uint16x8_t sum = vdupq_n_u16(0);
+    uint32x4_t ref_sigma_sqd = vdupq_n_u32(0);
+    uint32x4_t cmp_sigma_sqd = vdupq_n_u32(0);
+    uint32x4_t sigma_both = vdupq_n_u32(0);
+
+    for (uint32_t y = 0; y < WIN_SIZE; ++y) {
+      uint16x8_t r0, r1, r2, r3;
+      uint32x4_t r4, r5;
+      uint8_t *refNext = AdvancePointer(src.ref, 16);
+      uint8_t *cmpNext = AdvancePointer(src.cmp, 16);
+
+      r0 = vld1q_u16(src.ref);
+      r1 = vld1q_u16(src.cmp);
+      r2 = vld1q_u16((uint16_t *)refNext);
+      r3 = vld1q_u16((uint16_t *)cmpNext);
+
+      /* sum ref_sum & cmp_sum */
+      r4 = vpaddlq_u16(vpaddq_u16(r0, r2));
+      r5 = vpaddlq_u16(vpaddq_u16(r1, r3));
+      r5 = vshlq_n_u32(r5, 16);
+      sum = vaddq_u16(sum, vreinterpretq_u16_u32(r4));
+      sum = vaddq_u16(sum, vreinterpretq_u16_u32(r5));
+
+      /* sum ref_sigma_sqd & cmp_sigma_sqd & sigma_both */
+      uint16x4_t s0, s1, s2, s3, s4, s5, s6, s7;
+
+      s0 = vget_low_u16(r0);
+      s1 = vget_high_u16(r0);
+      s2 = vget_low_u16(r1);
+      s3 = vget_high_u16(r1);
+      s4 = vget_low_u16(r2);
+      s5 = vget_high_u16(r2);
+      s6 = vget_low_u16(r3);
+      s7 = vget_high_u16(r3);
+
+      r4 = vpaddq_u32(vmull_u16(s0, s0),vmull_u16(s1, s1));
+      r5 = vpaddq_u32(vmull_u16(s4, s4),vmull_u16(s5, s5));
+      r4 = vpaddq_u32(r4, r5);
+      ref_sigma_sqd = vaddq_u32(ref_sigma_sqd, r4);
+
+      r4 = vpaddq_u32(vmull_u16(s2, s2),vmull_u16(s3, s3));
+      r5 = vpaddq_u32(vmull_u16(s6, s6),vmull_u16(s7, s7));
+      r4 = vpaddq_u32(r4, r5);
+      cmp_sigma_sqd = vaddq_u32(cmp_sigma_sqd, r4);
+
+      r4 = vpaddq_u32(vmull_u16(s0, s2),vmull_u16(s1, s3));
+      r5 = vpaddq_u32(vmull_u16(s4, s6),vmull_u16(s5, s7));
+      r4 = vpaddq_u32(r4, r5);
+      sigma_both = vaddq_u32(sigma_both, r4);
+
+      src.ref = AdvancePointer(src.ref, src.refStride);
+      src.cmp = AdvancePointer(src.cmp, src.cmpStride);
+    }
+
+    vst1q_u8(pDst, vreinterpretq_u8_u16(sum));
+    vst1q_u8(pDst + dstStride, vreinterpretq_u8_u32(ref_sigma_sqd));
+    vst1q_u8(pDst + 2 * dstStride, vreinterpretq_u8_u32(cmp_sigma_sqd));
+    vst1q_u8(pDst + 3 * dstStride, vreinterpretq_u8_u32(sigma_both));
+    pDst = AdvancePointer(pDst, WIN_CHUNK * sizeof(uint32_t));
+
+    /* advance source pointers */
+    src.ref =
+        AdvancePointer(src.ref, WIN_CHUNK * srcStep - WIN_SIZE * src.refStride);
+    src.cmp =
+        AdvancePointer(src.cmp, WIN_CHUNK * srcStep - WIN_SIZE * src.cmpStride);
+  }
+
+  if (i < num4x4Windows) {
+    SSIM_4X4_WINDOW_BUFFER buf = {pDst, dstStride};
+
+    load_4x4_windows_10u_c(&buf, num4x4Windows - i, &src);
+  }
+
+} /* void load_4x4_windows_10u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) */
+#endif
+
 void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
   enum { WIN_CHUNK = 2, WIN_SIZE = 4 };
 
@@ -1144,6 +1231,147 @@ void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
   if (i < numWindows) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
+                             windowStride, bitDepthMinus8, div_lookup_ptr,
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
+                             essim_mink_value);
+  }
+}
+
+#define calc_window_ssim_int_10u_neon() \
+  { \
+    /* STEP 2. adjust values */ \
+    uint64_t a_64[2], c_64[2], d_64[2]; \
+    int64_t b_64[2]; \
+    uint32x2_t ref_sum_2 = vreinterpret_u32_u64(vadd_u64(vget_low_u64(ref_sum), \
+                            vshl_n_u64(vget_high_u64(ref_sum), 32))); \
+    uint32x2_t cmp_sum_2 = vreinterpret_u32_u64(vadd_u64(vget_low_u64(cmp_sum), \
+                            vshl_n_u64(vget_high_u64(cmp_sum), 32))); \
+    uint64x2_t both_sum_mul = vmull_u32(ref_sum_2, cmp_sum_2); \
+    uint64x2_t ref_sum_sqd = vmull_u32(ref_sum_2, ref_sum_2); \
+    uint64x2_t cmp_sum_sqd = vmull_u32(cmp_sum_2, cmp_sum_2); \
+    ref_sigma_sqd = vsubq_u64(ref_sigma_sqd, ref_sum_sqd); \
+    cmp_sigma_sqd = vsubq_u64(cmp_sigma_sqd, cmp_sum_sqd); \
+    sigma_both_a = vsubq_s64( \
+      vreinterpretq_s64_u64(sigma_both),vreinterpretq_s64_u64(both_sum_mul)); \
+    /* STEP 3. process numbers, do scale */ \
+    a = vaddq_u64(vshlq_n_u64(both_sum_mul, 1), fullC1); \
+    b = vaddq_s64(sigma_both_a, halfC2); \
+    c = vaddq_u64(vaddq_u64(ref_sum_sqd, cmp_sum_sqd), fullC1); \
+    d = vaddq_u64(vaddq_u64(ref_sigma_sqd, cmp_sigma_sqd), fullC2); \
+    /* process numerators */ \
+    vst1q_u64(a_64, a); \
+    vst1q_s64(b_64, b); \
+    num[0] = (a_64[0] >> 5) * (b_64[0] >> 5); \
+    num[1] = (a_64[1] >> 5) * (b_64[1] >> 5); \
+    /* process denominators */ \
+    vst1q_u64(c_64, c); \
+    vst1q_u64(d_64, d); \
+    denom[0] = ((c_64[0] >> 5) * (d_64[0] >> 5) >> 1); \
+    denom[1] = ((c_64[1] >> 5) * (d_64[1] >> 5) >> 1); \
+  } \
+
+void sum_windows_8x4_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_8x4_int_8u_neon(SUM_WINDOWS_ACTUAL_ARGS);
+}
+
+void sum_windows_8x8_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_8x8_int_8u_neon(SUM_WINDOWS_ACTUAL_ARGS);
+}
+
+void sum_windows_16x4_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_16_int_10u_neon(SUM_WINDOWS_ACTUAL_ARGS);
+}
+
+void sum_windows_16x8_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_16_int_10u_neon(SUM_WINDOWS_ACTUAL_ARGS);
+}
+
+void sum_windows_16x16_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS) {
+  sum_windows_16_int_10u_neon(SUM_WINDOWS_ACTUAL_ARGS);
+}
+
+void sum_windows_16_int_10u_neon(SUM_WINDOWS_FORMAL_ARGS) {
+  enum { WIN_CHUNK = 2, WIN_SIZE = 16 };
+  const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
+  const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
+  const uint64x2_t fullC1 = vdupq_n_u64(C1);
+  const uint64x2_t fullC2 = vdupq_n_u64(C2);
+  const int64x2_t halfC2 = vdupq_n_s64(C2>>1);
+  const uint64x2_t fullMSB = vdupq_n_u64(MSB);
+  uint64x2_t a, c, d;
+  int64x2_t b, sigma_both_a;
+  int64_t ssim_mink_sum = 0, ssim_sum = 0;
+  const uint8_t *pSrc = pBuf->p;
+  const ptrdiff_t srcStride = pBuf->stride;
+  int64_t num[WIN_CHUNK];
+  int64_t denom[WIN_CHUNK];
+  int32_t extraRtShiftBitsForSSIMVal =
+          (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
+  int64_t mink_pow_ssim_val = 0;
+  float const_1 =
+        1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
+  size_t i = 0;
+  for (; i + WIN_CHUNK <= numWindows; i += WIN_CHUNK) {
+    uint64x2_t ref_sum = vdupq_n_u64(0);
+    uint64x2_t cmp_sum = vdupq_n_u64(0);
+    uint64x2_t ref_sigma_sqd = vdupq_n_u64(0);
+    uint64x2_t cmp_sigma_sqd = vdupq_n_u64(0);
+    uint64x2_t sigma_both = vdupq_n_u64(0);
+    uint32x4_t _r0, _r1;
+    uint64x2_t _r2;
+    for (uint32_t x = 0; x < 16; x+=4){
+      _r0 = vld1q_u32((const uint32_t *)(pSrc + x*srcStride));
+      _r1 = vld1q_u32((const uint32_t *)(pSrc + windowStride + x*srcStride));
+      _r2 = vpaddlq_u32(vpaddq_u32(_r0, _r1));
+      ref_sum = vaddq_u64(ref_sum, (vbicq_u64(_r2, fullMSB)));
+      cmp_sum = vaddq_u64(cmp_sum, (vshrq_n_u64(_r2, 16)));
+      _r0 = vld1q_u32((const uint32_t *)(pSrc + (x+1)*srcStride));
+      _r1 = vld1q_u32((const uint32_t *)(pSrc + windowStride + (x+1)*srcStride));
+      _r2 = vpaddlq_u32(vpaddq_u32(_r0, _r1));
+      ref_sigma_sqd = vaddq_u64(ref_sigma_sqd, _r2);
+      _r0 = vld1q_u32((const uint32_t *)(pSrc + (x+2)*srcStride));
+      _r1 = vld1q_u32((const uint32_t *)(pSrc + windowStride + (x+2)*srcStride));
+      _r2 = vpaddlq_u32(vpaddq_u32(_r0, _r1));
+      cmp_sigma_sqd = vaddq_u64(cmp_sigma_sqd, _r2);
+      _r0 = vld1q_u32((const uint32_t *)(pSrc + (x+3)*srcStride));
+      _r1 = vld1q_u32((const uint32_t *)(pSrc + windowStride + (x+3)*srcStride));
+      _r2 = vpaddlq_u32(vpaddq_u32(_r0, _r1));
+      sigma_both = vaddq_u64(sigma_both, _r2);
+    }
+    pSrc += sizeof(uint16_t) * windowStride;
+    // CALC
+    ref_sigma_sqd = vshlq_n_u64(ref_sigma_sqd, 8);
+    cmp_sigma_sqd = vshlq_n_u64(cmp_sigma_sqd, 8);
+    sigma_both = vshlq_n_u64(sigma_both, 8);
+
+    calc_window_ssim_int_10u_neon();
+
+    int power_val;
+    uint16_t i16_map_denom;
+    int64_t ssim_val;
+    for (size_t w = 0; w < WIN_CHUNK; ++w) {
+      i16_map_denom = get_best_i16_from_u64((uint64_t)denom[w], &power_val);
+      ssim_val = (((num[w] >> power_val) * div_lookup_ptr[i16_map_denom]) +
+                  SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
+      ssim_sum += ssim_val;
+      int64_t const_1_minus_ssim_val = const_1 - ssim_val;
+      if(essim_mink_value == 4) {
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val * const_1_minus_ssim_val;
+      } else {
+            /*essim_mink_value == 3*/
+            mink_pow_ssim_val = const_1_minus_ssim_val * const_1_minus_ssim_val *
+                                const_1_minus_ssim_val;
+      }
+      ssim_mink_sum += mink_pow_ssim_val;
+    }
+  }
+  res->ssim_sum += ssim_sum;
+  res->ssim_mink_sum += ssim_mink_sum;
+  res->numWindows += i;
+  if (i < numWindows) {
+    SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
+    sum_windows_int_10u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
                              SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
 							 essim_mink_value);
