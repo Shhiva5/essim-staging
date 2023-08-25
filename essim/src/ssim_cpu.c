@@ -69,7 +69,7 @@ enum { _XCR_XFEATURE_ENABLED_MASK = 0 };
 #endif /* !defined(_XCR_XFEATURE_ENABLED_MASK) */
 #endif /* defined(_LINUX) */
 
-static eCPUType QueryCpuType() {
+static eCPUType QueryCpuType(void) {
   eCPUType cpuType = cpuPlain;
 
   int res[4], eax, ebx, ecx, edx;
@@ -118,13 +118,13 @@ static eCPUType QueryCpuType() {
 
   return cpuType;
 
-} /* eCPUType QueryCpuType() */
+} /* eCPUType QueryCpuType(void) */
 
 #elif defined(_ARM) || defined(_ARM64)
 
 #if defined(__ANDROID__)
 
-static eCPUType QueryCpuType() {
+static eCPUType QueryCpuType(void) {
   eCPUType cpuType = cpuPlain;
 
 #if defined(_ARM64)
@@ -142,23 +142,23 @@ static eCPUType QueryCpuType() {
 
 #elif defined(__APPLE__) || defined(MAC_OS_X) || defined(_LINUX)
 
-static eCPUType QueryCpuType() { return cpu_neon; }
+static eCPUType QueryCpuType(void) { return cpu_neon; }
 
 #else
 
-static eCPUType QueryCpuType() { return cpuPlain; }
+static eCPUType QueryCpuType(void) { return cpuPlain; }
 
 #endif /* defined(__ANDROID__) */
 
 #else /* an unknown platform */
 
-static eCPUType QueryCpuType() { return cpu_neon; }
+static eCPUType QueryCpuType(void) { return cpu_neon; }
 
 #endif /* defined(_X86) || defined(_X64) */
 
 static eCPUType g_cpuType = cpuUnk;
 
-eCPUType GetCpuType() {
+eCPUType GetCpuType(void) {
   if (cpuUnk == g_cpuType) {
     g_cpuType = QueryCpuType();
   }
