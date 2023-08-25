@@ -152,11 +152,11 @@ void load_4x4_windows_10u_avx2(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       r5 = _mm256_madd_epi16(r5, r3);
       r3 = _mm256_madd_epi16(r3, r3);
 
-      r0 = _mm256_permute4x64_epi64(_mm256_hadd_epi32(r0, r1), 
+      r0 = _mm256_permute4x64_epi64(_mm256_hadd_epi32(r0, r1),
                                     SWAP_MIDDLE_DWORD);
-      r4 = _mm256_permute4x64_epi64(_mm256_hadd_epi32(r4, r5), 
+      r4 = _mm256_permute4x64_epi64(_mm256_hadd_epi32(r4, r5),
                                     SWAP_MIDDLE_DWORD);
-      r2 = _mm256_permute4x64_epi64(_mm256_hadd_epi32(r2, r3), 
+      r2 = _mm256_permute4x64_epi64(_mm256_hadd_epi32(r2, r3),
                                     SWAP_MIDDLE_DWORD);
       ref_sigma_sqd = _mm256_add_epi32(ref_sigma_sqd, r0);
       cmp_sigma_sqd = _mm256_add_epi32(cmp_sigma_sqd, r2);
@@ -1042,7 +1042,7 @@ void sum_windows_16x16_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound, 
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
                              essim_mink_value);
   }
 }
@@ -1183,11 +1183,11 @@ void sum_windows_16_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     __m256i ref_sum = _mm256_cvtepu32_epi64(ref_sum_m128i);
     __m256i cmp_sum = _mm256_cvtepu32_epi64(cmp_sum_m128i);
 
-    __m256i ref_sigma_sqd = 
+    __m256i ref_sigma_sqd =
             _mm256_slli_epi64(_mm256_cvtepu32_epi64(ref_sigma_sqd_m128i), 8);
-    __m256i cmp_sigma_sqd = 
+    __m256i cmp_sigma_sqd =
             _mm256_slli_epi64(_mm256_cvtepu32_epi64(cmp_sigma_sqd_m128i), 8);
-    __m256i sigma_both = 
+    __m256i sigma_both =
             _mm256_slli_epi64(_mm256_cvtepu32_epi64(sigma_both_m128i), 8);
 
     calc_window_ssim_int_10u_avx2();
@@ -1196,7 +1196,7 @@ void sum_windows_16_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     uint16_t i16_map_denom;
     int64_t ssim_val;
     for (size_t w = 0; w < WIN_CHUNK; ++w) {
-   
+
       num[w] = (int64_t)(temp_a[w] >> 5)  * (temp_b[w] >> 5);
       denom[w] = ((uint64_t)(temp_c[w] >> 5) * (temp_d[w] >> 5)) >> 1;
 
@@ -1223,7 +1223,7 @@ void sum_windows_16_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_10u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound, 
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
                              essim_mink_value);
   }
 }

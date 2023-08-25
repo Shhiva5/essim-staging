@@ -144,7 +144,7 @@ static int essim_plane_16bit(AVFilterContext *ctx, void *arg,
         if (essim_ctx) {
             ssim_reset_ctx(essim_ctx);
 #if UPDATED_INTEGER_IMPLEMENTATION
-            res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight, 
+            res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight,
                                    essim_mink_value);
 #else
             res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight);
@@ -184,7 +184,7 @@ static int essim_plane(AVFilterContext *ctx, void *arg,
         if (essim_ctx) {
             ssim_reset_ctx(essim_ctx);
 #if UPDATED_INTEGER_IMPLEMENTATION
-            res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight, 
+            res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight,
                                    essim_mink_value);
 #else
             res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight);
@@ -242,7 +242,7 @@ static int do_essim(FFFrameSync *fs)
             int* pSsimScore = &ssim_score;
             int* pEssimScore = &essim_score;
 #if UPDATED_INTEGER_IMPLEMENTATION
-            ssim_aggregate_score(pSsimScore, pEssimScore, s->essim_ctx_array[i], 
+            ssim_aggregate_score(pSsimScore, pEssimScore, s->essim_ctx_array[i],
                                  essim_mink_value);
 #else
             ssim_aggregate_score(pSsimScore, pEssimScore, s->essim_ctx_array[i]);
