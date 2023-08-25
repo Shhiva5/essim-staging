@@ -1049,7 +1049,6 @@ void sum_windows_16x16_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
 #define calc_window_ssim_int_10u_avx2() \
   { \
     /* STEP 2. adjust values */ \
-    __m256i _r; \
     __m256i both_sum_mul = _mm256_mul_epu32(ref_sum, cmp_sum); \
     __m256i ref_sum_sqd = _mm256_mul_epu32(ref_sum, ref_sum); \
     __m256i cmp_sum_sqd = _mm256_mul_epu32(cmp_sum, cmp_sum); \
@@ -1062,13 +1061,10 @@ void sum_windows_16x16_int_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     c = _mm256_add_epi64(_mm256_add_epi64(ref_sum_sqd, cmp_sum_sqd), fullC1); \
     d = _mm256_add_epi64(_mm256_add_epi64( \
                 ref_sigma_sqd, cmp_sigma_sqd), fullC2); \
-    /* process numerators */ \
-    _r = _mm256_mul_epi32(_mm256_srli_epi64(a, 5), _mm256_srli_epi64(b, 5)); \
-    _mm256_storeu_si256((__m256i *)num, _r); \
-    /* process denominators */ \
-    _r = _mm256_srli_epi64(_mm256_mul_epi32( \
-          _mm256_srli_epi64(c, 5), _mm256_srli_epi64(d, 5)), 1); \
-    _mm256_storeu_si256((__m256i *)denom, _r); \
+    _mm256_storeu_si256((__m256i *)temp_a, a); \
+    _mm256_storeu_si256((__m256i *)temp_b, b); \
+    _mm256_storeu_si256((__m256i *)temp_c, c); \
+    _mm256_storeu_si256((__m256i *)temp_d, d); \
   } \
 
 void sum_windows_8x4_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
@@ -1098,8 +1094,8 @@ void sum_windows_16_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
   int64_t ssim_mink_sum = 0, ssim_sum = 0;
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
-  int64_t num[WIN_CHUNK];
-  int64_t denom[WIN_CHUNK];
+  int64_t num[WIN_CHUNK], denom[WIN_CHUNK], temp_b[WIN_CHUNK];
+  uint64_t temp_a[WIN_CHUNK], temp_c[WIN_CHUNK], temp_d[WIN_CHUNK];
   int32_t extraRtShiftBitsForSSIMVal =
           (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
   int64_t mink_pow_ssim_val = 0;
@@ -1117,21 +1113,32 @@ void sum_windows_16_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     __m128i ref_sigma_sqd_m128i = _mm_setzero_si128();
     __m128i cmp_sigma_sqd_m128i = _mm_setzero_si128();
     __m128i sigma_both_m128i = _mm_setzero_si128();
-    __m128i _r0, _r1, _r2, _r3;
+    __m128i _r0, _r1, _r2, _r3, _r4, _r5, _r6, _r7, _r8;
     for (uint32_t x = 0; x < 16; x+=4){
       _r0 = _mm_loadu_si128(
                 (const __m128i *)(pSrc + x*srcStride));
-      _r1 = _mm_loadu_si128(
+      _r1 = _mm_and_si128(_r0, fullLSB);
+      _r2 = _mm_srli_epi32(_r0, 16);
+      _r0 = _mm_loadu_si128(
                 (const __m128i *)(pSrc + windowStride + x*srcStride));
-      _r2 = _mm_loadu_si128(
+      _r3 = _mm_and_si128(_r0, fullLSB);
+      _r4 = _mm_srli_epi32(_r0, 16);
+      _r0 = _mm_loadu_si128(
                 (const __m128i *)(pSrc + 2*windowStride + x*srcStride));
-      _r3 = _mm_loadu_si128(
+      _r5 = _mm_and_si128(_r0, fullLSB);
+      _r6 = _mm_srli_epi32(_r0, 16);
+      _r0 = _mm_loadu_si128(
                 (const __m128i *)(pSrc + 3*windowStride + x*srcStride));
-      _r1 = _mm_hadd_epi32(_r0, _r1);
-      _r3 = _mm_hadd_epi32(_r2, _r3);
+      _r7 = _mm_and_si128(_r0, fullLSB);
+      _r8 = _mm_srli_epi32(_r0, 16);
+
       _r1 = _mm_hadd_epi32(_r1, _r3);
-      _r0 = _mm_and_si128(_r1, fullLSB);
-      _r1 = _mm_srli_epi32(_r1, 16);
+      _r5 = _mm_hadd_epi32(_r5, _r7);
+      _r0 = _mm_hadd_epi32(_r1, _r5);
+      _r2 = _mm_hadd_epi32(_r2, _r4);
+      _r6 = _mm_hadd_epi32(_r6, _r8);
+      _r1 = _mm_hadd_epi32(_r2, _r6);
+
       ref_sum_m128i = _mm_add_epi32(ref_sum_m128i, _r0);
       cmp_sum_m128i = _mm_add_epi32(cmp_sum_m128i, _r1);
       _r0 = _mm_loadu_si128(
@@ -1188,6 +1195,8 @@ void sum_windows_16_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     uint16_t i16_map_denom;
     int64_t ssim_val;
     for (size_t w = 0; w < WIN_CHUNK; ++w) {
+      num[w] = (int64_t)(temp_a[w] >> 5)  * (temp_b[w] >> 5);
+      denom[w] = ((uint64_t)(temp_c[w] >> 5) * (temp_d[w] >> 5)) >> 1;
       i16_map_denom = get_best_i16_from_u64((uint64_t)denom[w], &power_val);
       ssim_val = (((num[w] >> power_val) * div_lookup_ptr[i16_map_denom]) +
                   SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;

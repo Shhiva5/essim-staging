@@ -441,13 +441,13 @@ p->params.calc_window_ssim_proc = (SSIM_DATA_8BIT == dataType)
   uint32_t SSIMValRtShiftBits = 0;
   uint32_t SSIMValRtShiftHalfRound = 0;
   uint32_t* div_lookup_ptr = NULL;
-  const uint64_t MAX_SSIM_ACCUMULATED_SUM_VALUE = (uint64_t)1 << 63;
+  uint64_t MAX_SSIM_ACCUMULATED_SUM_VALUE = (uint64_t)1 << 63;
   if(mode != SSIM_MODE_PERF_FLOAT) {
     /*generating LUT to avoid final stage division in cal window for ssim_val*/
     div_lookup_ptr = div_lookup_generator();
 
     if(essim_mink_value == 4) {
-      const uint64_t MAX_SSIM_ACCUMULATED_SUM_VALUE = 18446744073709551615;
+      MAX_SSIM_ACCUMULATED_SUM_VALUE = 18446744073709551615;
     }
     uint32_t numWindows = GetTotalWindows(width, height, windowSize, windowStride);
     uint32_t ssimFinalPrecisionMaxVal =
