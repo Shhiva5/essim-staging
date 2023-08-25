@@ -265,7 +265,7 @@ uint32_t GetTotalBitsInNumber(uint32_t number);
 /*generating lookup table for Q16 format*/
 extern uint32_t div_lookup[];
 //const uint32_t div_Q_factor = 1073741824; // 2^30
-uint32_t* div_lookup_generator();
+uint32_t* div_lookup_generator(void);
 
 /*get best 16 bits*/
 uint16_t get_best_i16_from_u64(uint64_t temp, int *power);

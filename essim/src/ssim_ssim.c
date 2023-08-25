@@ -21,6 +21,7 @@
 
 uint32_t div_lookup[65536];
 
+#if !UPDATED_INTEGER_IMPLEMENTATION
 static uint32_t isqrt(const uint64_t v) {
   if (0 == v) {
     return 0;
@@ -46,8 +47,9 @@ static uint32_t isqrt(const uint64_t v) {
 
   return lower;
 }
+#endif
 
-uint32_t* div_lookup_generator() {
+uint32_t* div_lookup_generator(void) {
     div_lookup[0] = div_Q_factor;
     for (int i = 1; i <= 65535; ++i) {
         div_lookup[i] = div_Q_factor / i;
@@ -441,14 +443,10 @@ p->params.calc_window_ssim_proc = (SSIM_DATA_8BIT == dataType)
   uint32_t SSIMValRtShiftBits = 0;
   uint32_t SSIMValRtShiftHalfRound = 0;
   uint32_t* div_lookup_ptr = NULL;
-  uint64_t MAX_SSIM_ACCUMULATED_SUM_VALUE = (uint64_t)1 << 63;
+  const uint64_t MAX_SSIM_ACCUMULATED_SUM_VALUE = essim_mink_value == 4 ? 18446744073709551615U : (uint64_t)1 << 63;
   if(mode != SSIM_MODE_PERF_FLOAT) {
     /*generating LUT to avoid final stage division in cal window for ssim_val*/
     div_lookup_ptr = div_lookup_generator();
-
-    if(essim_mink_value == 4) {
-      MAX_SSIM_ACCUMULATED_SUM_VALUE = 18446744073709551615;
-    }
     uint32_t numWindows = GetTotalWindows(width, height, windowSize, windowStride);
     uint32_t ssimFinalPrecisionMaxVal =
                 ceil(pow(MAX_SSIM_ACCUMULATED_SUM_VALUE/(double)numWindows, 1.0/essim_mink_value)/2);
