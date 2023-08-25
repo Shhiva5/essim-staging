@@ -415,6 +415,7 @@ p->params.calc_window_ssim_proc = (SSIM_DATA_8BIT == dataType)
   uint32_t SSIMValRtShiftBits = 0;
   uint32_t SSIMValRtShiftHalfRound = 0;
   uint32_t* div_lookup_ptr = NULL;
+
   const uint64_t MAX_SSIM_ACCUMULATED_SUM_VALUE 
                  = essim_mink_value == 4 ? 18446744073709551615U : (uint64_t)1 << 63;
   if(mode != SSIM_MODE_PERF_FLOAT) {
@@ -542,11 +543,19 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
 #else
 eSSIMResult ssim_aggregate_score(float *const pSsimScore,
                                  float *const pEssimScore,
+                                 const SSIM_CTX_ARRAY *ctxa,
+                                 const uint32_t essim_mink_value)
+#else
+eSSIMResult ssim_aggregate_score(float *const pSsimScore,
+                                 float *const pEssimScore,
 
                                  const SSIM_CTX_ARRAY *ctxa)
 #endif
 {
 
+                                 const SSIM_CTX_ARRAY *ctxa)
+#endif
+{
   if ((NULL == pSsimScore) || (NULL == pEssimScore) || (NULL == ctxa)) {
     return SSIM_ERR_NULL_PTR;
   }

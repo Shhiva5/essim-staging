@@ -322,6 +322,7 @@ void load_4x4_windows_10u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
 
 } /* void load_4x4_windows_10u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) */
 #endif
+
 void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
   enum { WIN_CHUNK = 2, WIN_SIZE = 4 };
 

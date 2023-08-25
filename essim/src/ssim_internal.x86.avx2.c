@@ -151,6 +151,7 @@ void load_4x4_windows_10u_avx2(LOAD_4x4_WINDOWS_FORMAL_ARGS) {
       r1 = _mm256_madd_epi16(r1, r1);
       r5 = _mm256_madd_epi16(r5, r3);
       r3 = _mm256_madd_epi16(r3, r3);
+
       r0 = _mm256_permute4x64_epi64(_mm256_hadd_epi32(r0, r1), 
                                     SWAP_MIDDLE_DWORD);
       r4 = _mm256_permute4x64_epi64(_mm256_hadd_epi32(r4, r5), 
@@ -1138,7 +1139,6 @@ void sum_windows_16_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
       _r2 = _mm_hadd_epi32(_r2, _r4);
       _r6 = _mm_hadd_epi32(_r6, _r8);
       _r1 = _mm_hadd_epi32(_r2, _r6);
-
       ref_sum_m128i = _mm_add_epi32(ref_sum_m128i, _r0);
       cmp_sum_m128i = _mm_add_epi32(cmp_sum_m128i, _r1);
       _r0 = _mm_loadu_si128(
@@ -1182,6 +1182,7 @@ void sum_windows_16_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
     // CALC
     __m256i ref_sum = _mm256_cvtepu32_epi64(ref_sum_m128i);
     __m256i cmp_sum = _mm256_cvtepu32_epi64(cmp_sum_m128i);
+
     __m256i ref_sigma_sqd = 
             _mm256_slli_epi64(_mm256_cvtepu32_epi64(ref_sigma_sqd_m128i), 8);
     __m256i cmp_sigma_sqd = 
@@ -1190,13 +1191,15 @@ void sum_windows_16_int_10u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
             _mm256_slli_epi64(_mm256_cvtepu32_epi64(sigma_both_m128i), 8);
 
     calc_window_ssim_int_10u_avx2();
-    
+
     int power_val;
     uint16_t i16_map_denom;
     int64_t ssim_val;
     for (size_t w = 0; w < WIN_CHUNK; ++w) {
+   
       num[w] = (int64_t)(temp_a[w] >> 5)  * (temp_b[w] >> 5);
       denom[w] = ((uint64_t)(temp_c[w] >> 5) * (temp_d[w] >> 5)) >> 1;
+
       i16_map_denom = get_best_i16_from_u64((uint64_t)denom[w], &power_val);
       ssim_val = (((num[w] >> power_val) * div_lookup_ptr[i16_map_denom]) +
                   SSIMValRtShiftHalfRound) >> SSIMValRtShiftBits;
