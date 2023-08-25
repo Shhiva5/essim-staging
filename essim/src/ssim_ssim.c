@@ -21,33 +21,7 @@
 
 uint32_t div_lookup[65536];
 
-static uint32_t isqrt(const uint64_t v) {
-  if (0 == v) {
-    return 0;
-  } else if (0xfffffffe00000001 <= v) {
-    return 0xffffffff;
-  }
-
-  uint32_t lower = 1, upper = (uint32_t)min(v, 0xfffffffe);
-
-  while (lower + 1 < upper) {
-    const uint32_t middle = (uint32_t)(((uint64_t)lower + upper) / 2);
-    const uint64_t squared = (uint64_t)middle * middle;
-
-    if (v < squared) {
-      upper = middle;
-    } else {
-      lower = middle;
-      if (squared == v) {
-        break;
-      }
-    }
-  }
-
-  return lower;
-}
-
-uint32_t* div_lookup_generator() {
+uint32_t* div_lookup_generator(void) {
     div_lookup[0] = div_Q_factor;
     for (int i = 1; i <= 65535; ++i) {
         div_lookup[i] = div_Q_factor / i;
@@ -441,14 +415,12 @@ p->params.calc_window_ssim_proc = (SSIM_DATA_8BIT == dataType)
   uint32_t SSIMValRtShiftBits = 0;
   uint32_t SSIMValRtShiftHalfRound = 0;
   uint32_t* div_lookup_ptr = NULL;
-  const uint64_t MAX_SSIM_ACCUMULATED_SUM_VALUE = (uint64_t)1 << 63;
+
+  const uint64_t MAX_SSIM_ACCUMULATED_SUM_VALUE 
+                 = essim_mink_value == 4 ? 18446744073709551615U : (uint64_t)1 << 63;
   if(mode != SSIM_MODE_PERF_FLOAT) {
     /*generating LUT to avoid final stage division in cal window for ssim_val*/
     div_lookup_ptr = div_lookup_generator();
-
-    if(essim_mink_value == 4) {
-      const uint64_t MAX_SSIM_ACCUMULATED_SUM_VALUE = 18446744073709551615;
-    }
     uint32_t numWindows = GetTotalWindows(width, height, windowSize, windowStride);
     uint32_t ssimFinalPrecisionMaxVal =
                 ceil(pow(MAX_SSIM_ACCUMULATED_SUM_VALUE/(double)numWindows, 1.0/essim_mink_value)/2);
@@ -571,11 +543,19 @@ eSSIMResult ssim_aggregate_score(float *const pSsimScore,
 #else
 eSSIMResult ssim_aggregate_score(float *const pSsimScore,
                                  float *const pEssimScore,
+                                 const SSIM_CTX_ARRAY *ctxa,
+                                 const uint32_t essim_mink_value)
+#else
+eSSIMResult ssim_aggregate_score(float *const pSsimScore,
+                                 float *const pEssimScore,
 
                                  const SSIM_CTX_ARRAY *ctxa)
 #endif
 {
 
+                                 const SSIM_CTX_ARRAY *ctxa)
+#endif
+{
   if ((NULL == pSsimScore) || (NULL == pEssimScore) || (NULL == ctxa)) {
     return SSIM_ERR_NULL_PTR;
   }

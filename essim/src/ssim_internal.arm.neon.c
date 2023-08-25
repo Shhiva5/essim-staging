@@ -1232,7 +1232,7 @@ void sum_windows_16_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
     sum_windows_int_8u_c(res, &buf, numWindows - i, windowSize,
                              windowStride, bitDepthMinus8, div_lookup_ptr,
-                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound,
+                             SSIMValRtShiftBits, SSIMValRtShiftHalfRound, 
                              essim_mink_value);
   }
 }

@@ -38,7 +38,7 @@ target_include_directories(essim PRIVATE
   ${CMAKE_SOURCE_DIR}
   )
 
-if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
   set_target_properties(essim PROPERTIES COMPILE_FLAGS "-fexceptions -Wall -Wpedantic -O3")
 else()
   set_property(SOURCE "essim/src/ssim_internal.x86.sse41.c" "essim/src/ssim_internal.x86.ssse3.c"  PROPERTY COMPILE_FLAGS "-mssse3 -msse4.1")

@@ -561,6 +561,7 @@ void sum_windows_int_10u_c(SUM_WINDOWS_FORMAL_ARGS) {
   int32_t extraRtShiftBitsForSSIMVal =
           (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
   int64_t mink_pow_ssim_val = 0;
+
   int64_t const_1 =
             1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
 
