@@ -238,20 +238,25 @@ static int do_essim(FFFrameSync *fs)
     ctx->internal->execute(ctx, s->ssim_plane, &td, NULL, FFMIN((s->planeheight[1] + 3) >> 2, s->nb_threads));
 
     for (i = 0; i < s->nb_components; i++) {
+#if UPDATED_INTEGER_IMPLEMENTATION
+            float ssim_score = 0, essim_score = 0;
+            float* pSsimScore = &ssim_score;
+            float* pEssimScore = &essim_score;
+            ssim_aggregate_score(pSsimScore, pEssimScore, s->essim_ctx_array[i],
+                                 essim_mink_value);
+            cSsim[i] = *pSsimScore;
+            cEssim[i] = *pEssimScore;
+#else
             int ssim_score = 0, essim_score = 0;
             int* pSsimScore = &ssim_score;
             int* pEssimScore = &essim_score;
-#if UPDATED_INTEGER_IMPLEMENTATION
-            ssim_aggregate_score(pSsimScore, pEssimScore, s->essim_ctx_array[i],
-                                 essim_mink_value);
-#else
             ssim_aggregate_score(pSsimScore, pEssimScore, s->essim_ctx_array[i]);
-#endif
             cSsim[i] = *pSsimScore;
             cSsim[i] = cSsim[i]/ (1u << SSIM_LOG2_SCALE);
 
             cEssim[i] = *pEssimScore;
             cEssim[i] =  1 - cEssim[i]/ (1u << SSIM_LOG2_SCALE); // 1-COV
+#endif
     }
 
     for (i = 0; i < s->nb_components; i++) {
