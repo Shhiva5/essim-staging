@@ -24,7 +24,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <essim.h>
+#include "essim.h"
 #include "libavutil/avstring.h"
 #include "libavutil/opt.h"
 #include "libavutil/pixdesc.h"
@@ -344,7 +344,12 @@ static int config_input_ref(AVFilterLink *inlink)
     ESSIMContext *s = ctx->priv;
     int sum = 0, i;
 
-    s->nb_threads = ff_filter_get_nb_threads(ctx);
+	if(s->mode == SSIM_MODE_REF) {
+		/*In ESSIM lib, ref mode does not support multi threading*/
+		s->nb_threads = 1;
+	} else {
+		s->nb_threads = ff_filter_get_nb_threads(ctx);
+	}
     s->nb_components = desc->nb_components;
 
     if (ctx->inputs[0]->w != ctx->inputs[1]->w ||
