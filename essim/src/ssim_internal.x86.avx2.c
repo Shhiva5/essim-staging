@@ -309,6 +309,40 @@ static const int8_t sum_12x12_shuffle[16] = {0, 1, 4, 5, 8,  9,  -1, -1,
     _r0 = _mm256_hadd_epi32(_r0, _r1);                                         \
     value = _mm256_mul_ps(_mm256_cvtepi32_ps(_r0), invWindowSize_sqd);         \
   }
+#if UPDATED_INTEGER_IMPLEMENTATION
+#define ASM_CALC_8_FLOAT_SSIM_AVX2()                                           \
+  {                                                                            \
+    __m256 a, b, c, d, ssim_val;                                               \
+    __m256 one = _mm256_set1_ps(1);                                            \
+    /* STEP 2. adjust values */                                                \
+    __m256 both_sum_mul =                                                      \
+        _mm256_mul_ps(_mm256_mul_ps(ref_sum, cmp_sum), invWindowSize_qd);      \
+    __m256 ref_sum_sqd =                                                       \
+        _mm256_mul_ps(_mm256_mul_ps(ref_sum, ref_sum), invWindowSize_qd);      \
+    __m256 cmp_sum_sqd =                                                       \
+        _mm256_mul_ps(_mm256_mul_ps(cmp_sum, cmp_sum), invWindowSize_qd);      \
+    ref_sigma_sqd = _mm256_sub_ps(ref_sigma_sqd, ref_sum_sqd);                 \
+    cmp_sigma_sqd = _mm256_sub_ps(cmp_sigma_sqd, cmp_sum_sqd);                 \
+    sigma_both = _mm256_sub_ps(sigma_both, both_sum_mul);                      \
+    /* STEP 3. process numbers, do scale */                                    \
+    a = _mm256_add_ps(_mm256_add_ps(both_sum_mul, both_sum_mul), C1);          \
+    b = _mm256_add_ps(sigma_both, halfC2);                                     \
+    c = _mm256_add_ps(_mm256_add_ps(ref_sum_sqd, cmp_sum_sqd), C1);            \
+    d = _mm256_add_ps(_mm256_add_ps(ref_sigma_sqd, cmp_sigma_sqd), C2);        \
+    ssim_val = _mm256_mul_ps(a, b);                                            \
+    ssim_val = _mm256_add_ps(ssim_val, ssim_val);                              \
+    ssim_val = _mm256_div_ps(ssim_val, _mm256_mul_ps(c, d));                   \
+    ssim_sum = _mm256_add_ps(ssim_sum, ssim_val);                              \
+    ssim_val = _mm256_sub_ps(one, ssim_val);                                   \
+    if(essim_mink_value == 4) {                                                \
+      ssim_val = _mm256_mul_ps(ssim_val, ssim_val);                            \
+      ssim_val = _mm256_mul_ps(ssim_val, ssim_val);                            \
+    } else {                                                                   \
+      ssim_val = _mm256_mul_ps(_mm256_mul_ps(ssim_val, ssim_val), ssim_val);   \
+    }                                                                          \
+    ssim_mink_sum = _mm256_add_ps(ssim_mink_sum, ssim_val);                    \
+  }
+#elif !UPDATED_INTEGER_IMPLEMENTATION
 
 #define ASM_CALC_8_FLOAT_SSIM_AVX2()                                           \
   {                                                                            \
@@ -335,6 +369,7 @@ static const int8_t sum_12x12_shuffle[16] = {0, 1, 4, 5, 8,  9,  -1, -1,
     ssim_val = _mm256_mul_ps(ssim_val, ssim_val);                              \
     ssim_mink_sum = _mm256_add_ps(ssim_mink_sum, ssim_val);                    \
   }
+#endif
 
 void sum_windows_8x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS) {
   enum { WIN_CHUNK = 8, WIN_SIZE = 8 };

@@ -780,6 +780,42 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
     _r0 = vpaddq_u32(_r0, _r1);                                                \
     value = vmulq_f32(vcvtq_f32_u32(_r0), invWindowSize_sqd);                  \
   }
+#if UPDATED_INTEGER_IMPLEMENTATION
+#define ASM_CALC_4_FLOAT_SSIM_NEON()                                           \
+  {                                                                            \
+    float32x4_t one = vdupq_n_f32(1);                                          \
+    /* STEP 2. adjust values */                                                \
+    float32x4_t both_sum_mul =                                                 \
+        vmulq_f32(vmulq_f32(ref_sum, cmp_sum), invWindowSize_qd);              \
+    float32x4_t ref_sum_sqd =                                                  \
+        vmulq_f32(vmulq_f32(ref_sum, ref_sum), invWindowSize_qd);              \
+    float32x4_t cmp_sum_sqd =                                                  \
+        vmulq_f32(vmulq_f32(cmp_sum, cmp_sum), invWindowSize_qd);              \
+    ref_sigma_sqd = vsubq_f32(ref_sigma_sqd, ref_sum_sqd);                     \
+    cmp_sigma_sqd = vsubq_f32(cmp_sigma_sqd, cmp_sum_sqd);                     \
+    sigma_both = vsubq_f32(sigma_both, both_sum_mul);                          \
+    /* STEP 3. process numbers, do scale */                                    \
+    {                                                                          \
+      float32x4_t a = vaddq_f32(vaddq_f32(both_sum_mul, both_sum_mul), C1);    \
+      float32x4_t b = vaddq_f32(sigma_both, halfC2);                           \
+      float32x4_t c = vaddq_f32(vaddq_f32(ref_sum_sqd, cmp_sum_sqd), C1);      \
+      float32x4_t d = vaddq_f32(vaddq_f32(ref_sigma_sqd, cmp_sigma_sqd), C2);  \
+      float32x4_t ssim_val = vmulq_f32(a, b);                                  \
+      ssim_val = vaddq_f32(ssim_val, ssim_val);                                \
+      ssim_val = vdivq_f32(ssim_val, vmulq_f32(c, d));                         \
+      ssim_sum = vaddq_f32(ssim_sum, ssim_val);                                \
+      ssim_val = vsubq_f32(one, ssim_val);                                     \
+      if(essim_mink_value == 4) {                                              \
+        ssim_val = vmulq_f32(ssim_val, ssim_val);                              \
+        ssim_val = vmulq_f32(ssim_val, ssim_val);                              \
+      } else {                                                                 \
+        ssim_val = vmulq_f32(vmulq_f32(ssim_val, ssim_val), ssim_val);         \
+      }                                                                        \
+      ssim_val = vmulq_f32(ssim_val, ssim_val);                                \
+      ssim_mink_sum = vaddq_f32(ssim_mink_sum, ssim_val);                      \
+    }                                                                          \
+  }
+#elif !UPDATED_INTEGER_IMPLEMENTATION
 
 #define ASM_CALC_4_FLOAT_SSIM_NEON()                                           \
   {                                                                            \
@@ -807,6 +843,8 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
       ssim_mink_sum = vaddq_f32(ssim_mink_sum, ssim_val);                      \
     }                                                                          \
   }
+
+#endif
 
 void sum_windows_8x4_float_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
   enum { WIN_CHUNK = 4, WIN_SIZE = 8 };

@@ -99,10 +99,8 @@ IMPL_PROC_0(sum_windows_int_16u, (SUM_WINDOWS_FORMAL_ARGS),
 
 IMPL_PROC_0(sum_windows_float_8u, (SUM_WINDOWS_FORMAL_ARGS),
             (SUM_WINDOWS_ACTUAL_ARGS))
-IMPL_PROC_0(sum_windows_8x4_float_8u, (SUM_WINDOWS_FORMAL_ARGS),
-            (SUM_WINDOWS_ACTUAL_ARGS))
-//IMPL_PROC_2(sum_windows_8x4_float_8u, (SUM_WINDOWS_FORMAL_ARGS),
-//            (SUM_WINDOWS_ACTUAL_ARGS), ssse3, avx2)
+IMPL_PROC_2(sum_windows_8x4_float_8u, (SUM_WINDOWS_FORMAL_ARGS),
+           (SUM_WINDOWS_ACTUAL_ARGS), ssse3, avx2)
 IMPL_PROC_2(sum_windows_12x4_float_8u, (SUM_WINDOWS_FORMAL_ARGS),
             (SUM_WINDOWS_ACTUAL_ARGS), ssse3, avx2)
 IMPL_PROC_0(sum_windows_float_16u, (SUM_WINDOWS_FORMAL_ARGS),
@@ -150,10 +148,8 @@ IMPL_PROC_0(sum_windows_int_16u, (SUM_WINDOWS_FORMAL_ARGS),
 
 IMPL_PROC_0(sum_windows_float_8u, (SUM_WINDOWS_FORMAL_ARGS),
             (SUM_WINDOWS_ACTUAL_ARGS))
-IMPL_PROC_0(sum_windows_8x4_float_8u, (SUM_WINDOWS_FORMAL_ARGS),
-            (SUM_WINDOWS_ACTUAL_ARGS))
-//IMPL_PROC_1(sum_windows_8x4_float_8u, (SUM_WINDOWS_FORMAL_ARGS),
-//            (SUM_WINDOWS_ACTUAL_ARGS), neon)
+IMPL_PROC_1(sum_windows_8x4_float_8u, (SUM_WINDOWS_FORMAL_ARGS),
+           (SUM_WINDOWS_ACTUAL_ARGS), neon)
 IMPL_PROC_0(sum_windows_12x4_float_8u, (SUM_WINDOWS_FORMAL_ARGS),
             (SUM_WINDOWS_ACTUAL_ARGS))
 IMPL_PROC_0(sum_windows_float_16u, (SUM_WINDOWS_FORMAL_ARGS),
