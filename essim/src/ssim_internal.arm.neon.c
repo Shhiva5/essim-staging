@@ -811,7 +811,6 @@ void sum_windows_8x4_int_8u_neon(SUM_WINDOWS_FORMAL_ARGS) {
       } else {                                                                 \
         ssim_val = vmulq_f32(vmulq_f32(ssim_val, ssim_val), ssim_val);         \
       }                                                                        \
-      ssim_val = vmulq_f32(ssim_val, ssim_val);                                \
       ssim_mink_sum = vaddq_f32(ssim_mink_sum, ssim_val);                      \
     }                                                                          \
   }
