@@ -379,6 +379,42 @@ static const int8_t sum_12x12_shuffle[16] = {0, 1, 4, 5, 8,  9,  -1, -1,
     value = _mm_mul_ps(_mm_cvtepi32_ps(_r0), invWindowSize_sqd);               \
   }
 
+#if UPDATED_INTEGER_IMPLEMENTATION
+#define ASM_CALC_4_FLOAT_SSIM_SSE()                                            \
+  {                                                                            \
+    __m128 one = _mm_set1_ps(1);                                               \
+    /* STEP 2. adjust values */                                                \
+    __m128 both_sum_mul =                                                      \
+        _mm_mul_ps(_mm_mul_ps(ref_sum, cmp_sum), invWindowSize_qd);            \
+    __m128 ref_sum_sqd =                                                       \
+        _mm_mul_ps(_mm_mul_ps(ref_sum, ref_sum), invWindowSize_qd);            \
+    __m128 cmp_sum_sqd =                                                       \
+        _mm_mul_ps(_mm_mul_ps(cmp_sum, cmp_sum), invWindowSize_qd);            \
+    ref_sigma_sqd = _mm_sub_ps(ref_sigma_sqd, ref_sum_sqd);                    \
+    cmp_sigma_sqd = _mm_sub_ps(cmp_sigma_sqd, cmp_sum_sqd);                    \
+    sigma_both = _mm_sub_ps(sigma_both, both_sum_mul);                         \
+    /* STEP 3. process numbers, do scale */                                    \
+    {                                                                          \
+      __m128 a = _mm_add_ps(_mm_add_ps(both_sum_mul, both_sum_mul), C1);       \
+      __m128 b = _mm_add_ps(sigma_both, halfC2);                               \
+      __m128 c = _mm_add_ps(_mm_add_ps(ref_sum_sqd, cmp_sum_sqd), C1);         \
+      __m128 d = _mm_add_ps(_mm_add_ps(ref_sigma_sqd, cmp_sigma_sqd), C2);     \
+      __m128 ssim_val = _mm_mul_ps(a, b);                                      \
+      ssim_val = _mm_add_ps(ssim_val, ssim_val);                               \
+      ssim_val = _mm_div_ps(ssim_val, _mm_mul_ps(c, d));                       \
+      ssim_sum = _mm_add_ps(ssim_sum, ssim_val);                               \
+      ssim_val = _mm_sub_ps(one, ssim_val);                                    \
+      if(essim_mink_value == 4) {                                              \
+        ssim_val = _mm_mul_ps(ssim_val, ssim_val);                             \
+        ssim_val = _mm_mul_ps(ssim_val, ssim_val);                             \
+      } else {                                                                 \
+        ssim_val = _mm_mul_ps(_mm_mul_ps(ssim_val, ssim_val), ssim_val);       \
+      }                                                                        \
+      ssim_mink_sum = _mm_add_ps(ssim_mink_sum, ssim_val);                     \
+    }                                                                          \
+  }
+#elif !UPDATED_INTEGER_IMPLEMENTATION
+
 #define ASM_CALC_4_FLOAT_SSIM_SSE()                                            \
   {                                                                            \
     /* STEP 2. adjust values */                                                \
@@ -405,6 +441,7 @@ static const int8_t sum_12x12_shuffle[16] = {0, 1, 4, 5, 8,  9,  -1, -1,
       ssim_mink_sum = _mm_add_ps(ssim_mink_sum, ssim_val);                     \
     }                                                                          \
   }
+#endif
 
 void sum_windows_8x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) {
   enum { WIN_CHUNK = 4, WIN_SIZE = 8 };
@@ -454,9 +491,14 @@ void sum_windows_8x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) {
 
   if (i < numWindows) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
-
+#if UPDATED_INTEGER_IMPLEMENTATION
+    sum_windows_8x4_float_8u_c(res, &buf, numWindows - i, windowSize,
+                               windowStride, bitDepthMinus8,NULL,0,0,
+                               essim_mink_value);
+#elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_8x4_float_8u_c(res, &buf, numWindows - i, windowSize,
                                windowStride, bitDepthMinus8);
+#endif
   }
 
 } /* void sum_windows_8x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) */
@@ -568,9 +610,14 @@ void sum_windows_12x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) {
 
   if (i < numWindows) {
     SSIM_4X4_WINDOW_BUFFER buf = {(uint8_t *)pSrc, srcStride};
-
+#if UPDATED_INTEGER_IMPLEMENTATION
+    sum_windows_12x4_float_8u_c(res, &buf, numWindows - i, windowSize,
+                                windowStride, bitDepthMinus8, NULL, 0, 0,
+                                essim_mink_value);
+#elif !UPDATED_INTEGER_IMPLEMENTATION
     sum_windows_12x4_float_8u_c(res, &buf, numWindows - i, windowSize,
                                 windowStride, bitDepthMinus8);
+#endif
   }
 
 } /* void sum_windows_12x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS) */

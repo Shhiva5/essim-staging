@@ -35,6 +35,9 @@
 #include "internal.h"
 #include "video.h"
 
+#if UPDATED_INTEGER_IMPLEMENTATION
+const uint32_t essim_mink_value = 4;
+#endif
 
 typedef struct ESSIMContext {
     const AVClass *class;
@@ -140,7 +143,12 @@ static int essim_plane_16bit(AVFilterContext *ctx, void *arg,
 
         if (essim_ctx) {
             ssim_reset_ctx(essim_ctx);
+#if UPDATED_INTEGER_IMPLEMENTATION
+            res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight,
+                                   essim_mink_value);
+#else
             res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight);
+#endif
         } else {
             res = SSIM_ERR_FAILED;
         }
@@ -175,7 +183,12 @@ static int essim_plane(AVFilterContext *ctx, void *arg,
 
         if (essim_ctx) {
             ssim_reset_ctx(essim_ctx);
+#if UPDATED_INTEGER_IMPLEMENTATION
+            res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight,
+                                   essim_mink_value);
+#else
             res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight);
+#endif
         } else {
             res = SSIM_ERR_FAILED;
         }
@@ -225,16 +238,25 @@ static int do_essim(FFFrameSync *fs)
     ctx->internal->execute(ctx, s->ssim_plane, &td, NULL, FFMIN((s->planeheight[1] + 3) >> 2, s->nb_threads));
 
     for (i = 0; i < s->nb_components; i++) {
+#if UPDATED_INTEGER_IMPLEMENTATION
+            float ssim_score = 0, essim_score = 0;
+            float* pSsimScore = &ssim_score;
+            float* pEssimScore = &essim_score;
+            ssim_aggregate_score(pSsimScore, pEssimScore, s->essim_ctx_array[i],
+                                 essim_mink_value);
+            cSsim[i] = *pSsimScore;
+            cEssim[i] = *pEssimScore;
+#else
             int ssim_score = 0, essim_score = 0;
             int* pSsimScore = &ssim_score;
             int* pEssimScore = &essim_score;
             ssim_aggregate_score(pSsimScore, pEssimScore, s->essim_ctx_array[i]);
-
             cSsim[i] = *pSsimScore;
             cSsim[i] = cSsim[i]/ (1u << SSIM_LOG2_SCALE);
 
             cEssim[i] = *pEssimScore;
             cEssim[i] =  1 - cEssim[i]/ (1u << SSIM_LOG2_SCALE); // 1-COV
+#endif
     }
 
     for (i = 0; i < s->nb_components; i++) {
@@ -322,7 +344,12 @@ static int config_input_ref(AVFilterLink *inlink)
     ESSIMContext *s = ctx->priv;
     int sum = 0, i;
 
-    s->nb_threads = ff_filter_get_nb_threads(ctx);
+	if(s->mode == SSIM_MODE_REF) {
+		/*In ESSIM lib, ref mode does not support multi threading*/
+		s->nb_threads = 1;
+	} else {
+		s->nb_threads = ff_filter_get_nb_threads(ctx);
+	}
     s->nb_components = desc->nb_components;
 
     if (ctx->inputs[0]->w != ctx->inputs[1]->w ||
@@ -362,6 +389,21 @@ static int config_input_ref(AVFilterLink *inlink)
 
 
     for(int i = 0; i < s->nb_components; ++i){
+#if UPDATED_INTEGER_IMPLEMENTATION
+        s->essim_ctx_array[i] = ssim_allocate_ctx_array(
+            s->nb_threads,
+            s->planewidth[i],
+            s->planeheight[i],
+            s->bitdepth_minus_8,
+            desc->comp[0].depth > 8 ? SSIM_DATA_16BIT : SSIM_DATA_8BIT,
+
+            windowSize,
+            windowStride,
+            d2h,
+            mode,
+            flags,
+            essim_mink_value);
+#else
         s->essim_ctx_array[i] = ssim_allocate_ctx_array(
             s->nb_threads,
             s->planewidth[i],
@@ -374,6 +416,7 @@ static int config_input_ref(AVFilterLink *inlink)
             d2h,
             mode,
             flags);
+#endif
     }
 
     if (!s->score)
