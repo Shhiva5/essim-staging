@@ -76,19 +76,11 @@ eSSIMResult ssim_compute_threaded(
     const uint32_t width, const uint32_t height, const uint32_t bitDepthMinus8,
     const uint32_t windowSize, const uint32_t windowStride, const uint32_t d2h,
     const eSSIMMode mode, const eSSIMFlags flags, const uint32_t numThreads) {
-#if UPDATED_INTEGER_IMPLEMENTATION
   std::unique_ptr<SSIM_CTX_ARRAY, ctx_array_deallocator> ctx_array(
       ssim_allocate_ctx_array(
           numThreads, width, height, bitDepthMinus8,
           bitDepthMinus8 > 0 ? SSIM_DATA_16BIT : SSIM_DATA_8BIT, windowSize,
           windowStride, 1, mode, flags, essim_mink_value));
-#else
-  std::unique_ptr<SSIM_CTX_ARRAY, ctx_array_deallocator> ctx_array(
-      ssim_allocate_ctx_array(
-          numThreads, width, height, bitDepthMinus8,
-          bitDepthMinus8 > 0 ? SSIM_DATA_16BIT : SSIM_DATA_8BIT, windowSize,
-          windowStride, 1, mode, flags));
-#endif
   if (!ctx_array) {
     return SSIM_ERR_ALLOC;
   }
@@ -104,13 +96,8 @@ eSSIMResult ssim_compute_threaded(
     ssim_reset_ctx(ctx);
     const uint32_t beginHeight = height * t / numThreads;
     const uint32_t endHeight = height * (t + 1) / numThreads;
-#if UPDATED_INTEGER_IMPLEMENTATION
     return ssim_compute_ctx(ctx, ref, refStride, cmp, cmpStride, beginHeight,
                             endHeight - beginHeight, essim_mink_value);
-#else
-    return ssim_compute_ctx(ctx, ref, refStride, cmp, cmpStride, beginHeight,
-                            endHeight - beginHeight);
-#endif
   };
 
   for (size_t t = 1; t < numThreads; ++t) {
@@ -126,12 +113,8 @@ eSSIMResult ssim_compute_threaded(
   }
 
   if (SSIM_OK == res) {
-#if UPDATED_INTEGER_IMPLEMENTATION
     res = ssim_aggregate_score(pSsimScore, pEssimScore, ctx_array.get(),
                                essim_mink_value);
-#else
-    res = ssim_aggregate_score(pSsimScore, pEssimScore, ctx_array.get());
-#endif
   }
 
   return res;
@@ -278,18 +261,10 @@ TEST(ssimTest, threading) {
                  << windowStride<< std::endl;
         float essimRef = 0;
         float ssimRef = 0;
-#if UPDATED_INTEGER_IMPLEMENTATION
-        auto resRef = ssim_compute_8u(&ssimRef, &essimRef, pRef, refStride, pCmp,
-                                      cmpStride, width, height, windowSize,
-                                      windowStride, 1, SSIM_MODE_REF,
-                                      SSIM_SPATIAL_POOLING_BOTH,
-                                      essim_mink_value);
-#else
-        auto resRef = ssim_compute_8u(&ssimRef, &essimRef, pRef, refStride, pCmp,
-                                      cmpStride, width, height, windowSize,
-                                      windowStride, 1, SSIM_MODE_REF,
-                                      SSIM_SPATIAL_POOLING_BOTH);
-#endif
+        auto resRef = ssim_compute_8u(
+            &ssimRef, &essimRef, pRef, refStride, pCmp, cmpStride, width,
+            height, windowSize, windowStride, 1, SSIM_MODE_REF,
+            SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
         std::cout << "ssimRef : " << (float)ssimRef <<  " essimRef : "
                   << (float)essimRef << std::endl;
 #if PROFILING_PRINTS
@@ -299,21 +274,13 @@ TEST(ssimTest, threading) {
         start = clock();
 #endif
         float essimRefInt = 0;
-		    float ssimRefInt = 0;
-#if UPDATED_INTEGER_IMPLEMENTATION
-		    auto resRefInt = ssim_compute_8u(&ssimRefInt, &essimRefInt, pRef, refStride, pCmp,
-                                      cmpStride, width, height, windowSize,
-                                      windowStride, 1, SSIM_MODE_PERF_INT,
-                                      SSIM_SPATIAL_POOLING_BOTH,
-                                      essim_mink_value);
-#else
-		    auto resRefInt = ssim_compute_8u(&ssimRefInt, &essimRefInt, pRef, refStride, pCmp,
-                                      cmpStride, width, height, windowSize,
-                                      windowStride, 1, SSIM_MODE_PERF_INT,
-                                      SSIM_SPATIAL_POOLING_BOTH);
-#endif
-		    std::cout << "ssimRef_Int : " << (float)ssimRefInt <<  " essimRef_Int : "
-                  << (float)essimRefInt << std::endl;
+        float ssimRefInt = 0;
+        auto resRefInt = ssim_compute_8u(
+            &ssimRefInt, &essimRefInt, pRef, refStride, pCmp, cmpStride, width,
+            height, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,
+            SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
+        std::cout << "ssimRef_Int : " << (float)ssimRefInt
+                  << " essimRef_Int : " << (float)essimRefInt << std::endl;
 #if PROFILING_PRINTS
         end = clock();
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -324,19 +291,13 @@ TEST(ssimTest, threading) {
         start = clock();
 #endif
 		    float essimRefFloat = 0;
-		    float ssimRefFloat = 0;
-#if UPDATED_INTEGER_IMPLEMENTATION
-		    auto resRefFloat = ssim_compute_8u(&ssimRefFloat, &essimRefFloat, pRef, refStride, pCmp,
-                                      cmpStride, width, height, windowSize,
-                                      windowStride, 1, SSIM_MODE_PERF_FLOAT,
-                                      SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
-#else
-		    auto resRefFloat = ssim_compute_8u(&ssimRefFloat, &essimRefFloat, pRef, refStride, pCmp,
-                                      cmpStride, width, height, windowSize,
-                                      windowStride, 1, SSIM_MODE_PERF_FLOAT,
-                                      SSIM_SPATIAL_POOLING_BOTH);
-#endif
-		    std::cout << "ssimRefFloat : " << (float)ssimRefFloat <<  " essimRefFloat : "
+                    float ssimRefFloat = 0;
+                    auto resRefFloat = ssim_compute_8u(
+                        &ssimRefFloat, &essimRefFloat, pRef, refStride, pCmp,
+                        cmpStride, width, height, windowSize, windowStride, 1,
+                        SSIM_MODE_PERF_FLOAT, SSIM_SPATIAL_POOLING_BOTH,
+                        essim_mink_value);
+                    std::cout << "ssimRefFloat : " << (float)ssimRefFloat <<  " essimRefFloat : "
                   << (float)essimRefFloat << std::endl;
 #if PROFILING_PRINTS
         end = clock();
@@ -398,20 +359,13 @@ TEST(ssimTest, threading_10bit) {
                  << windowStride<< std::endl;
         // call the reference function
             float essimRef = 0;
-		    float ssimRef = 0;
-#if UPDATED_INTEGER_IMPLEMENTATION
-		    auto resRef = ssim_compute_16u(
-             &ssimRef, &essimRef, pRef, refStride, pCmp, cmpStride, width, height,
-            bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_REF,
-            SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
-#else
-		    auto resRef = ssim_compute_16u(
-             &ssimRef, &essimRef, pRef, refStride, pCmp, cmpStride, width, height,
-            bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_REF,
-            SSIM_SPATIAL_POOLING_BOTH);
-#endif
-		    std::cout << "ssimRef : " << (float)ssimRef <<  " essimRef : "
-                  << (float)essimRef << std::endl;
+            float ssimRef = 0;
+            auto resRef = ssim_compute_16u(
+                &ssimRef, &essimRef, pRef, refStride, pCmp, cmpStride, width,
+                height, bitDepthMinus8, windowSize, windowStride, 1,
+                SSIM_MODE_REF, SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
+            std::cout << "ssimRef : " << (float)ssimRef
+                      << " essimRef : " << (float)essimRef << std::endl;
 #if PROFILING_PRINTS
         clock_t start=0, end=0;
         double cpu_time_used=0;
@@ -419,20 +373,13 @@ TEST(ssimTest, threading_10bit) {
         start = clock();
 #endif
         float essimRefInt = 0;
-		    float ssimRefInt = 0;
-#if UPDATED_INTEGER_IMPLEMENTATION
-		    auto resRefInt = ssim_compute_16u(
-             &ssimRefInt, &essimRefInt, pRef, refStride, pCmp, cmpStride, width, height,
-            bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,
-            SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
-#else
-		    auto resRefInt = ssim_compute_16u(
-             &ssimRefInt, &essimRefInt, pRef, refStride, pCmp, cmpStride, width, height,
-            bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_INT,
-            SSIM_SPATIAL_POOLING_BOTH);
-#endif
-		    std::cout << "ssimRef_Int : " << (float)ssimRefInt <<  " essimRef_Int : "
-                  << (float)essimRefInt << std::endl;
+        float ssimRefInt = 0;
+        auto resRefInt = ssim_compute_16u(
+            &ssimRefInt, &essimRefInt, pRef, refStride, pCmp, cmpStride, width,
+            height, bitDepthMinus8, windowSize, windowStride, 1,
+            SSIM_MODE_PERF_INT, SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
+        std::cout << "ssimRef_Int : " << (float)ssimRefInt
+                  << " essimRef_Int : " << (float)essimRefInt << std::endl;
 #if PROFILING_PRINTS
         end = clock();
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -443,18 +390,11 @@ TEST(ssimTest, threading_10bit) {
         start = clock();
 #endif
         float ssimRefFloat = 0;
-        float essimRefFloat = 0 ;
-#if UPDATED_INTEGER_IMPLEMENTATION
+        float essimRefFloat = 0;
         auto resRefFloat = ssim_compute_16u(
-            &ssimRefFloat, &essimRefFloat, pRef, refStride, pCmp, cmpStride, width, height,
-            bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_FLOAT,
-            SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
-#else
-        auto resRefFloat = ssim_compute_16u(
-            &ssimRefFloat, &essimRefFloat, pRef, refStride, pCmp, cmpStride, width, height,
-            bitDepthMinus8, windowSize, windowStride, 1, SSIM_MODE_PERF_FLOAT,
-            SSIM_SPATIAL_POOLING_BOTH);
-#endif
+            &ssimRefFloat, &essimRefFloat, pRef, refStride, pCmp, cmpStride,
+            width, height, bitDepthMinus8, windowSize, windowStride, 1,
+            SSIM_MODE_PERF_FLOAT, SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
         std::cout << "ssimRefFloat : " << (float)ssimRefFloat <<  " essimRefFloat : "
                   << (float)essimRefFloat << std::endl;
 #if PROFILING_PRINTS

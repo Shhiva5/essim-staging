@@ -75,17 +75,10 @@ void load_window_16u_c(LOAD_WINDOW_FORMAL_ARGS) {
 
 } /* void load_window_16u_c(LOAD_WINDOW_FORMAL_ARGS) */
 
-#if UPDATED_INTEGER_IMPLEMENTATION
 eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
                               const ptrdiff_t refStride, const void *cmp,
                               const ptrdiff_t cmpStride,
-                              const uint32_t essim_mink_value)
-#else
-eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
-                              const ptrdiff_t refStride, const void *cmp,
-                              const ptrdiff_t cmpStride)
-#endif
-{
+                              const uint32_t essim_mink_value) {
   const load_window_proc_t load_window_proc = ctx->params->load_window_proc;
   const calc_window_ssim_proc_t calc_window_ssim_proc =
       ctx->params->calc_window_ssim_proc;
@@ -101,12 +94,11 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
   const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
   const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
 
-#if UPDATED_INTEGER_IMPLEMENTATION
   int32_t extraRtShiftBitsForSSIMVal =
           (int32_t)ctx->SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
   int64_t mink_pow_ssim_val = 0;
-  int64_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
-#endif
+  int64_t const_1 =
+      1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
 
   int64_t ssim_mink_sum = 0, ssim_sum = 0;
   SSIM_SRC src;
@@ -125,7 +117,6 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
       load_window_proc(&wnd, &src, windowSize);
       src.ref = AdvancePointer(src.ref, windowStep);
       src.cmp = AdvancePointer(src.cmp, windowStep);
-#if UPDATED_INTEGER_IMPLEMENTATION
       const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2,
                     ctx->div_lookup_ptr, ctx->SSIMValRtShiftBits,
                     ctx->SSIMValRtShiftHalfRound);
@@ -141,13 +132,6 @@ eSSIMResult ssim_compute_prec(SSIM_CTX *const ctx, const void *ref,
                             * const_1_minus_ssim_val;
       }
       ssim_mink_sum += mink_pow_ssim_val;
-#elif !UPDATED_INTEGER_IMPLEMENTATION
-      const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2);
-
-      ssim_sum += ssim_val;
-      ssim_mink_sum +=
-          (int64_t)ssim_val * ssim_val; // TODO replace with (1 - ssim) ** 4
-#endif
     }
   }
 

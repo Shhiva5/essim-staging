@@ -18,7 +18,6 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
-#define UPDATED_INTEGER_IMPLEMENTATION 1
 #define PROFILING_PRINTS 0
 #define DEBUG_PRINTS 0
 
@@ -71,7 +70,6 @@ enum {
 /*
     basic API
 */
-#if UPDATED_INTEGER_IMPLEMENTATION
 eSSIMResult ssim_compute_8u(
     float* const pSsimScore,
     float* const pEssimScore,
@@ -88,55 +86,15 @@ eSSIMResult ssim_compute_8u(
     const eSSIMFlags flags,
     const uint32_t essim_mink_value);
 
-eSSIMResult ssim_compute_16u(
-    float* const pSsimScore,
-    float* const pEssimScore,
-    const uint16_t* ref,
-    const ptrdiff_t refStride,
-    const uint16_t* cmp,
-    const ptrdiff_t cmpStride,
-    const uint32_t width,
-    const uint32_t height,
-    const uint32_t bitDepthMinus8,
-    const uint32_t windowSize,
-    const uint32_t windowStride,
-    const uint32_t d2h,
-    const eSSIMMode mode,
-    const eSSIMFlags flags,
-    const uint32_t essim_mink_value);
-#else
-eSSIMResult ssim_compute_8u(
-    float* const pSsimScore,
-    float* const pEssimScore,
-    const uint8_t* ref,
-    const ptrdiff_t refStride,
-    const uint8_t* cmp,
-    const ptrdiff_t cmpStride,
-    const uint32_t width,
-    const uint32_t height,
-    const uint32_t windowSize,
-    const uint32_t windowStride,
-    const uint32_t d2h,
-    const eSSIMMode mode,
-    const eSSIMFlags flags);
-
-eSSIMResult ssim_compute_16u(
-    float* const pSsimScore,
-    float* const pEssimScore,
-    const uint16_t* ref,
-    const ptrdiff_t refStride,
-    const uint16_t* cmp,
-    const ptrdiff_t cmpStride,
-    const uint32_t width,
-    const uint32_t height,
-    const uint32_t bitDepthMinus8,
-    const uint32_t windowSize,
-    const uint32_t windowStride,
-    const uint32_t d2h,
-    const eSSIMMode mode,
-    const eSSIMFlags flags);
-
-#endif
+eSSIMResult ssim_compute_16u(float *const pSsimScore, float *const pEssimScore,
+                             const uint16_t *ref, const ptrdiff_t refStride,
+                             const uint16_t *cmp, const ptrdiff_t cmpStride,
+                             const uint32_t width, const uint32_t height,
+                             const uint32_t bitDepthMinus8,
+                             const uint32_t windowSize,
+                             const uint32_t windowStride, const uint32_t d2h,
+                             const eSSIMMode mode, const eSSIMFlags flags,
+                             const uint32_t essim_mink_value);
 /*
     advanced API
 */
@@ -147,33 +105,15 @@ typedef struct SSIM_CTX_ARRAY SSIM_CTX_ARRAY;
 /* allocate SSIM calculation contexts. these contexts have long life cycle
    and maybe reused in SSIM calls. typically contexts are allocated one per
    thread. */
-#if UPDATED_INTEGER_IMPLEMENTATION
-SSIM_CTX_ARRAY* ssim_allocate_ctx_array(
-    const size_t numCtx,
-    const uint32_t width,
-    const uint32_t height,
-    const uint32_t bitDepthMinus8,
-    const eSSIMDataType dataType,
-    const uint32_t windowSize,
-    const uint32_t windowStride,
-    const uint32_t d2h,
-    const eSSIMMode mode,
-    const eSSIMFlags flags,
-    const uint32_t essim_mink_value);
-#else
-SSIM_CTX_ARRAY* ssim_allocate_ctx_array(
-    const size_t numCtx,
-    const uint32_t width,
-    const uint32_t height,
-    const uint32_t bitDepthMinus8,
-    const eSSIMDataType dataType,
-    const uint32_t windowSize,
-    const uint32_t windowStride,
-    const uint32_t d2h,
-    const eSSIMMode mode,
-    const eSSIMFlags flags);
 
-#endif
+SSIM_CTX_ARRAY *
+ssim_allocate_ctx_array(const size_t numCtx, const uint32_t width,
+                        const uint32_t height, const uint32_t bitDepthMinus8,
+                        const eSSIMDataType dataType, const uint32_t windowSize,
+                        const uint32_t windowStride, const uint32_t d2h,
+                        const eSSIMMode mode, const eSSIMFlags flags,
+                        const uint32_t essim_mink_value);
+
 /* access a single context from allocated array of contexts */
 SSIM_CTX* ssim_access_ctx(
     const SSIM_CTX_ARRAY* const ctxa,
@@ -182,7 +122,6 @@ SSIM_CTX* ssim_access_ctx(
 /* reset a ctx with partial SSIM score */
 void ssim_reset_ctx(SSIM_CTX* const ctx);
 
-#if UPDATED_INTEGER_IMPLEMENTATION
 /* compute partial SSIM score of an image region */
 eSSIMResult ssim_compute_ctx(
     SSIM_CTX* const ctx,
@@ -196,30 +135,11 @@ eSSIMResult ssim_compute_ctx(
 
 /* aggregate partial SSIM scores from contexts and provide the final SSIM score
  */
-eSSIMResult ssim_aggregate_score(
-    float* const pSsimScore,
-    float* const pEssimScore,
-    const SSIM_CTX_ARRAY* ctxa,
-    const uint32_t essim_mink_value);
-#else
-/* compute partial SSIM score of an image region */
-eSSIMResult ssim_compute_ctx(
-    SSIM_CTX* const ctx,
-    const void* ref,
-    const ptrdiff_t refStride,
-    const void* cmp,
-    const ptrdiff_t cmpStride,
-    const uint32_t roiY,
-    const uint32_t roiHeight);
+eSSIMResult ssim_aggregate_score(float *const pSsimScore,
+                                 float *const pEssimScore,
+                                 const SSIM_CTX_ARRAY *ctxa,
+                                 const uint32_t essim_mink_value);
 
-/* aggregate partial SSIM scores from contexts and provide the final SSIM score
- */
-eSSIMResult ssim_aggregate_score(
-    float* const pSsimScore,
-    float* const pEssimScore,
-    const SSIM_CTX_ARRAY* ctxa);
-
-#endif
 /* free SSIM contexts */
 void ssim_free_ctx_array(SSIM_CTX_ARRAY* const ctxa);
 
@@ -241,7 +161,6 @@ struct context_array_deleter_t {
 using context_array_t =
     std::unique_ptr<SSIM_CTX_ARRAY, context_array_deleter_t>;
 
-#if UPDATED_INTEGER_IMPLEMENTATION
 inline context_array_t AllocateCtxArray(
     const size_t numCtx,
     const uint32_t width,
@@ -267,32 +186,6 @@ inline context_array_t AllocateCtxArray(
       flags,
       essim_mink_value));
 }
-#else
-inline context_array_t AllocateCtxArray(
-    const size_t numCtx,
-    const uint32_t width,
-    const uint32_t height,
-    const uint32_t bitDepthMinus8,
-    const eSSIMDataType dataType,
-    const uint32_t windowSize,
-    const uint32_t windowStride,
-    const uint32_t d2h,
-    const eSSIMMode mode,
-    const eSSIMFlags flags) {
-  return context_array_t(ssim_allocate_ctx_array(
-      numCtx,
-      width,
-      height,
-      bitDepthMinus8,
-      dataType,
-      windowSize,
-      windowStride,
-      d2h,
-      mode,
-      flags));
-}
-
-#endif
 } // namespace ssim
 
 #endif /* defined(__cplusplus) */

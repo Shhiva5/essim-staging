@@ -80,7 +80,6 @@ float get_ssim_float_constant(const uint32_t constIdx,
 } /* float get_ssim_float_constant(const uint32_t constIdx, const uint32_t
      bitDepthMinus8) */
 
-#if UPDATED_INTEGER_IMPLEMENTATION
 uint32_t GetTotalBitsInNumber(uint32_t number) {
 
   return (uint32_t)log2(number);
@@ -179,51 +178,6 @@ int64_t calc_window_ssim_int_10bd(CALC_WINDOW_SSIM_FORMAL_ARGS) {
   return ssim_val;
 
 } /* int64_t calc_window_ssim_int_10bd(CALC_WINDOW_SSIM_FORMAL_ARGS) */
-#elif !UPDATED_INTEGER_IMPLEMENTATION
-int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS) {
-  const uint32_t windowSize_sqd = windowSize * windowSize;
-
-  const uint16_t ref_sum = (uint16_t)pWnd->ref_sum;
-  const uint16_t cmp_sum = (uint16_t)pWnd->cmp_sum;
-  uint32_t ref_sigma_sqd = (uint32_t)pWnd->ref_sigma_sqd * windowSize_sqd;
-  uint32_t cmp_sigma_sqd = (uint32_t)pWnd->cmp_sigma_sqd * windowSize_sqd;
-  uint32_t sigma_both = (uint32_t)pWnd->sigma_both * windowSize_sqd;
-
-  /* STEP 2. adjust values */
-
-  const uint32_t ref_sum_sqd = ref_sum * ref_sum;
-  ref_sigma_sqd -= ref_sum_sqd;
-  const uint32_t cmp_sum_sqd = cmp_sum * cmp_sum;
-  cmp_sigma_sqd -= cmp_sum_sqd;
-  const uint32_t both_sum_mul = ref_sum * cmp_sum;
-  /* both sigma_both and both_sum are divided on 2 to avoid
-  overflowing while uinsigned -> int casting */
-  const int32_t sigma_both_a =
-      (int32_t)(sigma_both / 2) - (int32_t)(both_sum_mul / 2);
-
-  /* STEP 3. process numbers, do scale */
-
-  /* all following 2^8 * 2^8 * windowSize^4.
-  to avoid overflowing some values are divided on 2 */
-  const uint32_t a = (both_sum_mul + C1 / 2);
-  const int32_t b = (sigma_both_a + C2 / 4);
-  const uint32_t c = (ref_sum_sqd / 2 + cmp_sum_sqd / 2 + C1 / 2);
-  const uint32_t d = (ref_sigma_sqd / 2 + cmp_sigma_sqd / 2 + C2 / 2);
-
-  /* can't scale num on SSIM_SCALE to avoid overflowing.
-  dividing denom is an only option available, but it make results
-  a bit noisy */
-  const int64_t num = (int64_t)a * b;
-  const int64_t denom = ((int64_t)c * d) / (2 * (1 << SSIM_LOG2_SCALE));
-  /* in most cases denom is a huge value, and | 1 doesn't affect
-  anything. when denom is small and | 1 affects computation,
-  ssim_value is still very noisy and not reliable */
-  const int64_t ssim_val = (num + denom / 2) / (denom | 1);
-
-  return ssim_val;
-
-} /* int64_t calc_window_ssim_int_8u(CALC_WINDOW_SSIM_FORMAL_ARGS) */
-#endif
 
 int64_t calc_window_ssim_int_16u(CALC_WINDOW_SSIM_FORMAL_ARGS) {
   const uint32_t windowSize_sqd = windowSize * windowSize;
@@ -446,12 +400,11 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
 
   int64_t ssim_mink_sum = 0, ssim_sum = 0;
 
-#if UPDATED_INTEGER_IMPLEMENTATION
   int32_t extraRtShiftBitsForSSIMVal =
           (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
   int64_t mink_pow_ssim_val = 0;
-  int64_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
-#endif
+  int64_t const_1 =
+      1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
 
   const uint8_t *pSrc = pBuf->p;
   const ptrdiff_t srcStride = pBuf->stride;
@@ -476,7 +429,6 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
     /* set the next window */
     pSrc = AdvancePointer(pSrc + windowStride, -srcStride * windowSize);
 
-#if UPDATED_INTEGER_IMPLEMENTATION
     const int64_t ssim_val = calc_window_ssim_int_8u(&wnd, windowSize, C1, C2,
                                                     div_lookup_ptr, SSIMValRtShiftBits,
                                                     SSIMValRtShiftHalfRound);
@@ -498,12 +450,6 @@ void sum_windows_int_8u_c(SUM_WINDOWS_FORMAL_ARGS) {
                           * const_1_minus_ssim_val;
     }
     ssim_mink_sum += mink_pow_ssim_val;
-#elif !UPDATED_INTEGER_IMPLEMENTATION
-    const int64_t ssim_val = calc_window_ssim_int_8u(&wnd, windowSize, C1, C2);
-    ssim_sum += ssim_val;
-    ssim_mink_sum +=
-        (int64_t)ssim_val * ssim_val; // TODO replace with (1 - ssim) ** 4
-#endif
   }
 
   res->ssim_sum += ssim_sum;
@@ -624,15 +570,14 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
 
   const uint32_t C1 = get_ssim_int_constant(1, bitDepthMinus8, windowSize);
   const uint32_t C2 = get_ssim_int_constant(2, bitDepthMinus8, windowSize);
-#if UPDATED_INTEGER_IMPLEMENTATION
   const calc_window_ssim_proc_t calc_window_ssim_proc = (bitDepthMinus8==2) ?
                                                         (calc_window_ssim_int_10bd):
                                                         (calc_window_ssim_int_16u);
   int32_t extraRtShiftBitsForSSIMVal =
           (int32_t)SSIMValRtShiftBits - DEFAULT_Q_FORMAT_FOR_SSIM_VAL;
   int64_t mink_pow_ssim_val = 0;
-  int64_t const_1 = 1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
-#endif
+  int64_t const_1 =
+      1 << (DEFAULT_Q_FORMAT_FOR_SSIM_VAL - extraRtShiftBitsForSSIMVal);
   int64_t ssim_mink_sum = 0, ssim_sum = 0;
 
   const uint8_t *pSrc = pBuf->p;
@@ -659,7 +604,6 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
 
     /* set the next window */
     pSrc = AdvancePointer(pSrc, windowStep - srcStride * windowSize);
-#if UPDATED_INTEGER_IMPLEMENTATION
     const int64_t ssim_val = calc_window_ssim_proc(&wnd, windowSize, C1, C2,
                              div_lookup_ptr, SSIMValRtShiftBits,
                              SSIMValRtShiftHalfRound);
@@ -680,11 +624,6 @@ void sum_windows_int_16u_c(SUM_WINDOWS_FORMAL_ARGS) {
                           * const_1_minus_ssim_val;
     }
     ssim_mink_sum += mink_pow_ssim_val;
- #elif !UPDATED_INTEGER_IMPLEMENTATION
-    const int64_t ssim_val = calc_window_ssim_int_16u(&wnd, windowSize, C1, C2);
-    ssim_sum += ssim_val;
-    ssim_mink_sum += ssim_val * ssim_val; // TODO replace with (1 - ssim) ** 4
-  #endif
   }
 
   res->ssim_sum += ssim_sum;
