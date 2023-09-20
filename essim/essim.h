@@ -52,12 +52,13 @@ typedef enum eSSIMMode {
 } eSSIMMode;
 
 typedef enum eSSIMFlags {
-  /* return average SSIM value */
+  /* return SSIM value using arithmetic mean */
   SSIM_SPATIAL_POOLING_AVERAGE = 0,
 
-  /* like in hitchhiker's guide return coefficient of variance */
+  /* return eSSIM value using minkowski pooling */
   SSIM_SPATIAL_POOLING_MINK = 1,
 
+  /* return both SSIM and eSSIM values */
   SSIM_SPATIAL_POOLING_BOTH = 2
 
 } eSSIMFlags;

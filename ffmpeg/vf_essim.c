@@ -74,18 +74,18 @@ typedef struct ESSIMContext {
 static const AVOption essim_options[] = {
     { "stats_file", "file where to store per-frame difference information", OFFSET(stats_file_str), AV_OPT_TYPE_STRING, {.str=NULL}, 0, 0, FLAGS },
 
-    { "mode",  "mode of operation to trae off between performance and cross-platform precision", OFFSET(mode), AV_OPT_TYPE_INT,   { .i64 = SSIM_MODE_PERF_FLOAT }, 1, 2, FLAGS, "mode" },
-    { "ref",   "reference integer implementation with few optimizations",                        0,            AV_OPT_TYPE_CONST, { .i64 = SSIM_MODE_REF }, INT_MIN, INT_MAX, FLAGS, "mode" },
-    { "int",   "bit-exact optimized integer implementation",                                     0,            AV_OPT_TYPE_CONST, { .i64 = SSIM_MODE_PERF_INT }, INT_MIN, INT_MAX, FLAGS, "mode" },
-    { "perf",  "optimized float implementation, best performance but not bit-exact",             0,            AV_OPT_TYPE_CONST, { .i64 = SSIM_MODE_PERF_FLOAT }, INT_MIN, INT_MAX, FLAGS, "mode" },
+    { "mode",  "mode of operation to trade off between performance and cross-platform precision", OFFSET(mode), AV_OPT_TYPE_INT,   { .i64 = SSIM_MODE_PERF_INT }, 0, 2, FLAGS, "mode" },
+    { "ref",   "reference integer implementation with few optimizations",                         0,            AV_OPT_TYPE_CONST, { .i64 = SSIM_MODE_REF }, INT_MIN, INT_MAX, FLAGS, "mode" },
+    { "perf",  "optimized float implementation, not bit-exact",                                   0,            AV_OPT_TYPE_CONST, { .i64 = SSIM_MODE_PERF_FLOAT }, INT_MIN, INT_MAX, FLAGS, "mode" },
+    { "int",   "optimized integer implementation, bit exact",                                     0,            AV_OPT_TYPE_CONST, { .i64 = SSIM_MODE_PERF_INT }, INT_MIN, INT_MAX, FLAGS, "mode" },
 
     { "pooling", "pooling mode for combining the scores across the frame ", OFFSET(pooling), AV_OPT_TYPE_INT,   { .i64 = SSIM_SPATIAL_POOLING_BOTH }, 0, 2, FLAGS, "pool"},
     { "mean", "arithmetic mean pooling",                                    0,               AV_OPT_TYPE_CONST, { .i64 = SSIM_SPATIAL_POOLING_AVERAGE }, INT_MIN, INT_MAX, FLAGS, "pool" },
     { "mink", "minkowksi pooling",                                          0,               AV_OPT_TYPE_CONST, { .i64 = SSIM_SPATIAL_POOLING_MINK }, INT_MIN, INT_MAX, FLAGS, "pool" },
-    { "both", "both mean and cov pooling",                                  0,               AV_OPT_TYPE_CONST, { .i64 = SSIM_SPATIAL_POOLING_BOTH }, INT_MIN, INT_MAX, FLAGS, "pool" },
+    { "both", "both mean and mink pooling",                                 0,               AV_OPT_TYPE_CONST, { .i64 = SSIM_SPATIAL_POOLING_BOTH }, INT_MIN, INT_MAX, FLAGS, "pool" },
 
-    { "window", "size of window", OFFSET(window_size), AV_OPT_TYPE_INT, { .i64 = 8 }, 2, 32, FLAGS },
-    { "stride", "window stride", OFFSET(window_stride), AV_OPT_TYPE_INT, { .i64 = 4 }, 1, 32, FLAGS },
+    { "window", "size of window (8 or 16)", OFFSET(window_size), AV_OPT_TYPE_INT, { .i64 = 8 }, 8, 16, FLAGS },
+    { "stride", "window stride (4 or 8)",   OFFSET(window_stride), AV_OPT_TYPE_INT, { .i64 = 4 }, 4, 8, FLAGS },
     { "d2h", "ratio of viewing distance to viewport height", OFFSET(d2h), AV_OPT_TYPE_INT, { .i64 = 3 }, 1, 8, FLAGS },
     { NULL }
 };
@@ -269,32 +269,48 @@ static int do_essim(FFFrameSync *fs)
 
     for (i = 0; i < s->nb_components; i++) {
         int cidx = s->is_rgb ? s->rgba_map[i] : i;
-        set_meta(metadata, "lavfi.ssim.", s->comps[i], cSsim[cidx]);
-        set_meta(metadata, "lavfi.essim.", s->comps[i], cEssim[cidx]);
+        if (s->pooling != SSIM_SPATIAL_POOLING_MINK ) {
+            set_meta(metadata, "lavfi.ssim.", s->comps[i], cSsim[cidx]);
+        }
+        if (s->pooling != SSIM_SPATIAL_POOLING_AVERAGE ) {
+            set_meta(metadata, "lavfi.essim.", s->comps[i], cEssim[cidx]);
+        }
     }
-    s->ssim_total += ssimv;
-    s->essim_total += essimv;
 
-    set_meta(metadata, "lavfi.ssim.All", 0, ssimv);
-    set_meta(metadata, "lavfi.ssim.dB", 0, essim_db(ssimv, 1.0));
+    if (s->pooling != SSIM_SPATIAL_POOLING_MINK ) {
+        s->ssim_total += ssimv;
+        set_meta(metadata, "lavfi.ssim.All", 0, ssimv);
+        set_meta(metadata, "lavfi.ssim.dB", 0, essim_db(ssimv, 1.0));
+    }
 
-    set_meta(metadata, "lavfi.essim.All", 0, essimv);
-    set_meta(metadata, "lavfi.essim.dB", 0, essim_db(essimv, 1.0));
+    if (s->pooling != SSIM_SPATIAL_POOLING_AVERAGE ) {
+        s->essim_total += essimv;
+        set_meta(metadata, "lavfi.essim.All", 0, essimv);
+        set_meta(metadata, "lavfi.essim.dB", 0, essim_db(essimv, 1.0));
+    }
 
     if (s->stats_file) {
-        fprintf(s->stats_file, "SSIM  n:%"PRId64" ", s->nb_frames);
-        for (i = 0; i < s->nb_components; i++) {
-            int cidx = s->is_rgb ? s->rgba_map[i] : i;
-            fprintf(s->stats_file, "%c:%f ", s->comps[i], cSsim[cidx]);
+        if (s->pooling != SSIM_SPATIAL_POOLING_MINK ) {
+            fprintf(s->stats_file, "SSIM  n:%"
+            PRId64
+            " ", s->nb_frames);
+            for (i = 0; i < s->nb_components; i++) {
+                int cidx = s->is_rgb ? s->rgba_map[i] : i;
+                fprintf(s->stats_file, "%c:%f ", s->comps[i], cSsim[cidx]);
+            }
+            fprintf(s->stats_file, "All:%f (%f)\n", ssimv, essim_db(ssimv, 1.0));
         }
-        fprintf(s->stats_file, "All:%f (%f)\n", ssimv, essim_db(ssimv, 1.0));
 
-        fprintf(s->stats_file, "ESSIM n:%"PRId64" ", s->nb_frames);
-        for (i = 0; i < s->nb_components; i++) {
-            int cidx = s->is_rgb ? s->rgba_map[i] : i;
-            fprintf(s->stats_file, "%c:%f ", s->comps[i], cEssim[cidx]);
+        if (s->pooling != SSIM_SPATIAL_POOLING_AVERAGE ) {
+            fprintf(s->stats_file, "ESSIM n:%"
+            PRId64
+            " ", s->nb_frames);
+            for (i = 0; i < s->nb_components; i++) {
+                int cidx = s->is_rgb ? s->rgba_map[i] : i;
+                fprintf(s->stats_file, "%c:%f ", s->comps[i], cEssim[cidx]);
+            }
+            fprintf(s->stats_file, "All:%f (%f)\n", essimv, essim_db(essimv, 1.0));
         }
-        fprintf(s->stats_file, "All:%f (%f)\n", essimv, essim_db(essimv, 1.0));
     }
 
     return ff_filter_frame(ctx->outputs[0], master);
@@ -477,29 +493,34 @@ static av_cold void uninit(AVFilterContext *ctx)
     if (s->nb_frames > 0) {
         char buf[256];
         int i;
-        buf[0] = 0;
 
-        for (i = 0; i < s->nb_components; i++) {
-            int c = s->is_rgb ? s->rgba_map[i] : i;
-            av_strlcatf(buf, sizeof(buf), " %c:%f (%f)", s->comps[i], s->ssim[c] / s->nb_frames,
-                        essim_db(s->ssim[c], s->nb_frames));
+
+        if (s->pooling != SSIM_SPATIAL_POOLING_MINK ) {
+            buf[0] = 0;
+            for (i = 0; i < s->nb_components; i++) {
+                int c = s->is_rgb ? s->rgba_map[i] : i;
+                av_strlcatf(buf, sizeof(buf), " %c:%f (%f)", s->comps[i], s->ssim[c] / s->nb_frames,
+                            essim_db(s->ssim[c], s->nb_frames));
+            }
+
+            av_log(ctx, AV_LOG_INFO,
+                   "SSIM%s All:%f (%f) \n",
+                   buf, (s->ssim_total / s->nb_frames), essim_db(s->ssim_total, s->nb_frames));
         }
-        av_log(ctx, AV_LOG_INFO,
-            "SSIM%s All:%f (%f) \n",
-            buf, (s->ssim_total / s->nb_frames), essim_db(s->ssim_total, s->nb_frames));
 
-        //Reset buffer
-        buf[0] = 0;
+        if (s->pooling != SSIM_SPATIAL_POOLING_AVERAGE ) {
+            //Reset buffer
+            buf[0] = 0;
+            for (i = 0; i < s->nb_components; i++) {
+                int c = s->is_rgb ? s->rgba_map[i] : i;
+                av_strlcatf(buf, sizeof(buf), " %c:%f (%f)", s->comps[i], s->essim[c] / s->nb_frames,
+                            essim_db(s->essim[c], s->nb_frames));
 
-        for (i = 0; i < s->nb_components; i++) {
-            int c = s->is_rgb ? s->rgba_map[i] : i;
-            av_strlcatf(buf, sizeof(buf), " %c:%f (%f)", s->comps[i], s->essim[c] / s->nb_frames,
-                        essim_db(s->essim[c], s->nb_frames));
-
+            }
+            av_log(ctx, AV_LOG_INFO,
+                   "ESSIM%s All:%f (%f) \n",
+                   buf, (s->essim_total / s->nb_frames), essim_db(s->essim_total, s->nb_frames));
         }
-        av_log(ctx, AV_LOG_INFO,
-            "ESSIM%s All:%f (%f) \n",
-            buf, (s->essim_total / s->nb_frames), essim_db(s->essim_total, s->nb_frames));
     }
 
     ff_framesync_uninit(&s->fs);
@@ -537,7 +558,7 @@ static const AVFilterPad essim_outputs[] = {
 
 AVFilter ff_vf_essim = {
     .name          = "essim",
-    .description   = NULL_IF_CONFIG_SMALL("Calculate the ESSIM between two video streams."),
+    .description   = NULL_IF_CONFIG_SMALL("Calculate the eSSIM between two video streams."),
     .preinit       = essim_framesync_preinit,
     .init          = init,
     .uninit        = uninit,
