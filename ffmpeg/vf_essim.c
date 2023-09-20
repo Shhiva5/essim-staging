@@ -35,14 +35,13 @@
 #include "internal.h"
 #include "video.h"
 
-const uint32_t essim_mink_value = 4;
-
 typedef struct ESSIMContext {
     const AVClass *class;
     FFFrameSync fs;
     FILE *stats_file;
     char *stats_file_str;
     int mode;
+    int essim_mink_value;
     int pooling;
     int window_size;
     int window_stride;
@@ -74,8 +73,10 @@ static const AVOption essim_options[] = {
 
     { "mode",  "mode of operation to trade off between performance and cross-platform precision", OFFSET(mode), AV_OPT_TYPE_INT,   { .i64 = SSIM_MODE_PERF_INT }, 0, 2, FLAGS, "mode" },
     { "ref",   "reference integer implementation with few optimizations",                         0,            AV_OPT_TYPE_CONST, { .i64 = SSIM_MODE_REF }, INT_MIN, INT_MAX, FLAGS, "mode" },
-    { "perf",  "optimized float implementation, not bit-exact",                                   0,            AV_OPT_TYPE_CONST, { .i64 = SSIM_MODE_PERF_FLOAT }, INT_MIN, INT_MAX, FLAGS, "mode" },
-    { "int",   "optimized integer implementation, bit exact",                                     0,            AV_OPT_TYPE_CONST, { .i64 = SSIM_MODE_PERF_INT }, INT_MIN, INT_MAX, FLAGS, "mode" },
+    { "int",   "optimized integer implementation, bit-exact to reference",                        0,            AV_OPT_TYPE_CONST, { .i64 = SSIM_MODE_PERF_INT }, INT_MIN, INT_MAX, FLAGS, "mode" },
+    { "float", "optimized float implementation, not bit-exact to reference",                      0,            AV_OPT_TYPE_CONST, { .i64 = SSIM_MODE_PERF_FLOAT }, INT_MIN, INT_MAX, FLAGS, "mode" },
+
+    { "mink",  "minkowski pooling coefficient", OFFSET(essim_mink_value), AV_OPT_TYPE_INT,   { .i64 = 3 }, 3, 4, FLAGS },
 
     { "pooling", "pooling mode for combining the scores across the frame ", OFFSET(pooling), AV_OPT_TYPE_INT,   { .i64 = SSIM_SPATIAL_POOLING_BOTH }, 0, 2, FLAGS, "pool"},
     { "mean", "arithmetic mean pooling",                                    0,               AV_OPT_TYPE_CONST, { .i64 = SSIM_SPATIAL_POOLING_AVERAGE }, INT_MIN, INT_MAX, FLAGS, "pool" },
@@ -123,6 +124,7 @@ static int essim_plane_16bit(AVFilterContext *ctx, void *arg,
 {
     ThreadData *td = arg;
     eSSIMResult res = SSIM_OK;
+    ESSIMContext *s = ctx->priv;
 
     for (int c = 0; c < td->nb_components; c++) {
         int height = td->planeheight[c];
@@ -142,7 +144,7 @@ static int essim_plane_16bit(AVFilterContext *ctx, void *arg,
         if (essim_ctx) {
             ssim_reset_ctx(essim_ctx);
             res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight,
-                                   essim_mink_value);
+                                   s->essim_mink_value);
         } else {
             res = SSIM_ERR_FAILED;
         }
@@ -156,7 +158,7 @@ static int essim_plane(AVFilterContext *ctx, void *arg,
 {
     ThreadData *td = arg;
     eSSIMResult res = SSIM_OK;
-
+    ESSIMContext *s = ctx->priv;
 
     for (int c = 0; c < td->nb_components; c++) {
 
@@ -178,7 +180,7 @@ static int essim_plane(AVFilterContext *ctx, void *arg,
         if (essim_ctx) {
             ssim_reset_ctx(essim_ctx);
             res = ssim_compute_ctx(essim_ctx, ref, refStride, cmp, cmpStride, roiY, roiHeight,
-                                   essim_mink_value);
+                                   s->essim_mink_value);
         } else {
             res = SSIM_ERR_FAILED;
         }
@@ -232,7 +234,7 @@ static int do_essim(FFFrameSync *fs)
             float* pSsimScore = &ssim_score;
             float* pEssimScore = &essim_score;
             ssim_aggregate_score(pSsimScore, pEssimScore, s->essim_ctx_array[i],
-                                 essim_mink_value);
+                                 s->essim_mink_value);
             cSsim[i] = *pSsimScore;
             cEssim[i] = *pEssimScore;
     }
@@ -395,7 +397,7 @@ static int config_input_ref(AVFilterLink *inlink)
             d2h,
             mode,
             flags,
-            essim_mink_value);
+            s->essim_mink_value);
     }
 
     if (!s->score)
