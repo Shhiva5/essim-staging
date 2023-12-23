@@ -79,8 +79,8 @@ void print_help() {
   printf(" -mink : SSIM Minkowski pooling (can be 3 or 4).Default is 4. \n");
   /*Currently not supporting essimmode as user argument,
   because at frame level we need both INT and Float eSSIM values. */
-  /*printf(" -mode : Can be 0 -> SSIM_MODE_REF, 1 -> SSIM_MODE_PERF_INT,
-  2 -> SSIM_MODE_PERF_FLOAT. Default is 1 \n"); */
+  /*printf(" -mode : Can be 0 -> SSIM_MODE_REF, 1 -> SSIM_MODE_INT,
+  2 -> SSIM_MODE_PERF. Default is 1 \n"); */
   printf("\n Example cmd : \t");
   printf(" -r /mnt/d/InpYuvPath/xyz.yuv -d /mnt/d/ReconYuvPath/abc.yuv \
   -w 1280 -h 720 -bd 10 -wsize 16 -wstride 8 -mink 3\n");
@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
         Mode = atoi(argv[++i]);
         if(Mode != 0 && Mode != 1 && Mode != 2) {
           Mode = 1;
-          std::cout << "Considering default eSSIMMode i.e 1 (SSIM_MODE_PERF_INT)"
+          std::cout << "Considering default eSSIMMode i.e 1 (SSIM_MODE_INT)"
                     << std::endl;
         }
       }
@@ -167,9 +167,9 @@ int main(int argc, char **argv) {
   if(Mode == 0)
     ModeEnum = SSIM_MODE_REF;
   else if (Mode == 2)
-    ModeEnum = SSIM_MODE_PERF_FLOAT;
+    ModeEnum = SSIM_MODE_PERF;
   else
-    ModeEnum = SSIM_MODE_PERF_INT;
+    ModeEnum = SSIM_MODE_INT;
 
   if(ModeEnum == SSIM_MODE_REF) {
     std::cout << "currently not supporting at frame level" << std::endl;
@@ -303,7 +303,7 @@ int main(int argc, char **argv) {
 #endif
       ssim_compute_8u(&FrSSIMScore_Int, &FrESSIMScore_Int, InpYuvBuff, stride,
                                       ReconYuvBuff, stride, Width, Height, WSize,
-                                      WStride, 1, SSIM_MODE_PERF_INT,
+                                      WStride, 1, SSIM_MODE_INT,
                                       SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
 #if PROFILING_PRINTS
         end = clock();
@@ -315,7 +315,7 @@ int main(int argc, char **argv) {
 #endif
       ssim_compute_8u(&FrSSIMScore_float, &FrESSIMScore_float, InpYuvBuff, stride,
                                       ReconYuvBuff, stride, Width, Height, WSize,
-                                      WStride, 1, SSIM_MODE_PERF_FLOAT,
+                                      WStride, 1, SSIM_MODE_PERF,
                                       SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
 #if PROFILING_PRINTS
         end = clock();
@@ -335,7 +335,7 @@ int main(int argc, char **argv) {
 #endif
       ssim_compute_16u(&FrSSIMScore_Int, &FrESSIMScore_Int, InpYuvBuffHbd, stride,
                                       ReconYuvBuffHbd, stride, Width, Height, BitDepthMinus8,
-                                      WSize, WStride, 1, SSIM_MODE_PERF_INT,
+                                      WSize, WStride, 1, SSIM_MODE_INT,
                                       SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
 #if PROFILING_PRINTS
         end = clock();
@@ -347,7 +347,7 @@ int main(int argc, char **argv) {
 #endif
       ssim_compute_16u(&FrSSIMScore_float, &FrESSIMScore_float, InpYuvBuffHbd, stride,
                                       ReconYuvBuffHbd, stride, Width, Height, BitDepthMinus8,
-                                      WSize, WStride, 1, SSIM_MODE_PERF_FLOAT,
+                                      WSize, WStride, 1, SSIM_MODE_PERF,
                                       SSIM_SPATIAL_POOLING_BOTH, essim_mink_value);
 #if PROFILING_PRINTS
         end = clock();
