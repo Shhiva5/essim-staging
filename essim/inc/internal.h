@@ -411,7 +411,7 @@ void sum_windows_8x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_float_8u_ssse3(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_12x4_float_8u_avx2(SUM_WINDOWS_FORMAL_ARGS);
 
-#elif defined(_ARM) || defined(_ARM64)
+#elif defined(_ARM64)
 
 void load_4x4_windows_8u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS);
 void load_4x4_windows_16u_neon(LOAD_4x4_WINDOWS_FORMAL_ARGS);
@@ -447,6 +447,44 @@ void sum_windows_16_float_10u_neon(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x4_float_10u_neon(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x8_float_10u_neon(SUM_WINDOWS_FORMAL_ARGS);
 void sum_windows_16x16_float_10u_neon(SUM_WINDOWS_FORMAL_ARGS);
+#endif
+
+#elif defined(__arm__)
+
+void load_4x4_windows_8u_armv7(LOAD_4x4_WINDOWS_FORMAL_ARGS);
+void load_4x4_windows_16u_armv7(LOAD_4x4_WINDOWS_FORMAL_ARGS);
+
+void sum_windows_8x4_int_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+
+void sum_windows_8x4_float_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+#if NEW_SIMD_FUNC
+void load_4x4_windows_10u_armv7(LOAD_4x4_WINDOWS_FORMAL_ARGS);
+
+void sum_windows_8x8_int_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_int_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_int_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_int_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_int_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+
+void sum_windows_8x4_int_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_8x8_int_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_int_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_int_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_int_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_int_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+
+void sum_windows_8x8_float_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_float_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_float_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_float_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_float_8u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+
+void sum_windows_8x4_float_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_8x8_float_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16_float_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x4_float_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x8_float_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
+void sum_windows_16x16_float_10u_armv7(SUM_WINDOWS_FORMAL_ARGS);
 #endif
 
 #endif /* defined(_X86) || defined(_X64) */

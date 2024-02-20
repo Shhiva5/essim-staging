@@ -17,7 +17,7 @@
 #include <x86intrin.h>
 #endif /* defined(_WINDOWS) */
 
-#elif defined(_ARM) || defined(_ARM64)
+#elif defined(_ARM) || defined(_ARM64) ||defined(__arm__)
 
 #if defined(ANDROID)
 #include <cpu-features.h>
@@ -120,7 +120,7 @@ static eCPUType QueryCpuType(void) {
 
 } /* eCPUType QueryCpuType(void) */
 
-#elif defined(_ARM) || defined(_ARM64)
+#elif defined(_ARM) || defined(_ARM64) ||defined(__arm__)
 
 #if defined(__ANDROID__)
 
@@ -131,9 +131,9 @@ static eCPUType QueryCpuType(void) {
   if (android_getCpuFeatures() & ANDROID_CPU_ARM64_FEATURE_ASIMD) {
     cpuType = cpu_neon;
   }
-#else  /* !defined(_ARM64) */
+#elif defined(__arm__) /*if defined (__arm__)*/
   if (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) {
-    cpuType = cpu_neon;
+    cpuType = cpu_armv7;
   }
 #endif /* defined(_ARM64) */
 

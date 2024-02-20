@@ -37,10 +37,14 @@ typedef enum eCPUType {
   cpu_avx512bw = (1 << 10) | cpu_avx512f,
   cpu_avx512bwdq = cpu_avx512bw | cpu_avx512dq
 
-#elif defined(_ARM) || defined(_ARM64)
+#elif defined(_ARM64)
 
   cpu_neon = (1 << 0),
 
+#elif defined(_ARM)
+
+  cpu_armv7 = (1 << 0),
+  
 #endif /* defined(_X86) || defined(_X64) */
 
 } eCPUType;

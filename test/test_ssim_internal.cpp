@@ -151,9 +151,14 @@ TEST(ssimTest, Load4x4Windows8u) {
     TestLoad4x4Windows<uint16_t, uint32_t, uint8_t>(load_4x4_windows_8u_avx2,
                                                     0);
   }
-#elif defined(_ARM) || defined(_ARM64)
+#elif defined(_ARM64)
   if (ssim::CheckSIMD(cpu_neon)) {
     TestLoad4x4Windows<uint16_t, uint32_t, uint8_t>(load_4x4_windows_8u_neon,
+                                                    0);
+  }
+  #elif defined(__arm__)
+  if (ssim::CheckSIMD(cpu_armv7)) {
+    TestLoad4x4Windows<uint16_t, uint32_t, uint8_t>(load_4x4_windows_8u_armv7,
                                                     0);
   }
 #endif // defined(_X86) || defined(_X64)
@@ -175,10 +180,16 @@ TEST(ssimTest, Load4x4Windows16u) {
       TestLoad4x4Windows<uint32_t, uint64_t, uint16_t>(
           load_4x4_windows_16u_avx2, bitDepthMinus8);
     }
-#elif defined(_ARM) || defined(_ARM64)
+#elif defined(_ARM64)
     if (ssim::CheckSIMD(cpu_neon)) {
       TestLoad4x4Windows<uint32_t, uint64_t, uint16_t>(
           load_4x4_windows_16u_neon, bitDepthMinus8);
+    }
+
+#elif defined(__arm__)
+    if (ssim::CheckSIMD(cpu_armv7)) {
+      TestLoad4x4Windows<uint32_t, uint64_t, uint16_t>(
+          load_4x4_windows_16u_armv7, bitDepthMinus8);
     }
 #endif // defined(_X86) || defined(_X64)
     TestLoad4x4Windows<uint32_t, uint64_t, uint16_t>(load_4x4_windows_16u,

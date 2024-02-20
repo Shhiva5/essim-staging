@@ -132,10 +132,15 @@ int main(int argc, char **argv) {
     TestLoad4x4Window<uint8_t>(load_4x4_windows_8u_avx2,
                                "load_4x4_windows_8u_avx2");
   }
-#elif defined(_ARM) || defined(_ARM64)
+#elif defined(_ARM64)
   if (ssim::CheckSIMD(cpu_neon)) {
     TestLoad4x4Window<uint8_t>(load_4x4_windows_8u_neon,
                                "load_4x4_windows_8u_neon");
+  }
+  #elif defined(__arm__)
+  if (ssim::CheckSIMD(cpu_armv7)) {
+    TestLoad4x4Window<uint8_t>(load_4x4_windows_8u_armv7,
+                               "load_4x4_windows_8u_armv7");
   }
 #endif // defined(_X86) || defined(_X64)
   TestLoad4x4Window<uint8_t>(load_4x4_windows_8u, "load_4x4_windows_8u");
@@ -152,11 +157,18 @@ int main(int argc, char **argv) {
     TestLoad4x4Window<uint16_t>(load_4x4_windows_16u_avx2,
                                 "load_4x4_windows_16u_avx2");
   }
-#elif defined(_ARM) || defined(_ARM64)
+#elif defined(_ARM64)
   if (ssim::CheckSIMD(cpu_neon)) {
     TestLoad4x4Window<uint16_t>(load_4x4_windows_16u_neon,
                                 "load_4x4_windows_16u_neon");
   }
+
+  #elif defined(__arm__)
+  if (ssim::CheckSIMD(cpu_armv7)) {
+    TestLoad4x4Window<uint16_t>(load_4x4_windows_16u_armv7,
+                                "load_4x4_windows_16u_armv7");
+  }
+
 #endif // defined(_X86) || defined(_X64)
   TestLoad4x4Window<uint16_t>(load_4x4_windows_16u, "load_4x4_windows_16u");
 

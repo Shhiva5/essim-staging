@@ -61,6 +61,15 @@
 #define _ARM
 #endif /* _ARM */
 
+/* Additional block for ARMv7 support */
+#elif defined(_M_ARM_ARMV7) || defined(ARM_ARMV7) || defined(_ARM_ARMV7) || \
+    defined(__arm__) || defined(__ARM_ARCH_7__)
+
+/* Declare ARMv7 platform */
+#ifndef _ARMV7
+#define _ARMV7
+#endif /* _ARMV7 */
+
 #endif /* CPU platform */
 
 #endif /* !defined(__SSIM_XPLATFORM_H) */
